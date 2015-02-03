@@ -1,0 +1,230 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Mithril Test</title>
+  <!--
+  <link rel="stylesheet" href="css/styles.css?v=1.0">
+  -->
+  <script src="mithril.min.js"></script>
+  <script src="mithril.factory.js"></script>
+  <script>
+    window.onload = function(){
+      
+      var components = {
+        link: function(href, text, conf){
+          conf = conf || {}
+          conf.config = m.route;
+          conf.href = "/" + href;
+          
+          return m.el("a", conf, text);
+        }
+      };
+
+      var GlobalModels = {
+        User: function(fname, lname, id){
+          this.fname = fname || "";
+          this.lname = lname || "";
+          this.id = id || "";
+        }
+      };
+
+      var UserHeader = m.boiler();
+      UserHeader.name = "UserHeader";
+      UserHeader.model = function(){
+        this.LoggedInUser = new GlobalModels.User();
+      };
+      UserHeader.controller = function(){
+        this.login = function(){
+          this.model.LoggedInUser.fname = 'Mr';
+          this.model.LoggedInUser.lname = 'Bob';
+          this.model.LoggedInUser.id = 55678;
+        };
+        
+        this.logout = function(){
+          this.model.LoggedInUser.id = "";
+        };
+      };
+      UserHeader.view = function(ctrl){
+        var u = ctrl.model.LoggedInUser;
+        var name = !u.id ? 'Guest' : u.fname + ' ' + u.lname;
+        var p = m.el('p',[
+          m.el('i', name)
+        ]);
+        
+        p.append(m.el('a[href="#"]',{
+          onclick: function(evt){
+            evt.preventDefault();
+            if(!u.id){
+              ctrl.login();
+            }else{
+              ctrl.logout();
+            }
+          }
+        }, !u.id ? 'login' : 'logout'));
+        
+        return p;
+      };
+      
+      m.addModule(UserHeader);
+      
+      var Index = m.boiler();
+      Index.path = "/";
+      Index.name = "home";
+      Index.model = function(){
+        this.links = [];
+        this.title = m.prop('');
+        
+        this.linkObject = function(text, href){
+          this.text = text || '';
+          this.href = href || '';
+        };
+      };
+      Index.controller = function(){
+        self = this;
+        m.ajax.post("/getter", {id: 'foo'}, function(err, response){
+          self.model.title(response.string);
+        });
+        this.model.links.push(new this.model.linkObject('Search Users', 'users'));
+      };
+      Index.view = function(ctrl){
+        return [
+          m.importModule("UserHeader"),
+          m.el('h6',ctrl.model.title()),
+          m.el('nav',{class: 'nav'}, ctrl.model.links.map(function(l){
+            return components.link(l.href, l.text);
+          }))
+        ];
+      };
+      
+      m.addModule(Index);
+      
+      var Users = m.boiler();
+      Users.path = "/users";
+      Users.name = "Users";
+      Users.model = function(){
+        this.users = [];
+        this.incomplete = m.prop(true);
+        this.userObj = GlobalModels.User;
+      };
+      Users.controller = function(){
+        var self = this;
+
+        m.ajax.get("/getUsers", {}, function(err, response){
+          self.model.users = response.users.map(function(i){
+            return new self.model.userObj(i.fname, i.lname, i.id);
+          });
+          self.model.incomplete(false);
+        });
+
+        this.remove = function(u){
+          this.model.users.splice(this.model.users.indexOf(u),1);
+        };
+      }
+      Users.view = function(ctrl){
+        html = [
+          m.importModule("UserHeader"),
+          m.importModule("Header.header"),
+          m.el('div', ctrl.model.users.map(function(u){
+            return m.el('p', {
+                key: u.id,
+                class: 'user',
+                onmouseenter: function(e){
+                  //console.log(e)
+                }
+              }, [
+              m.el('span', u.fname + ' ' + u.lname),
+              m.el('span', m.trust('&nbsp;&nbsp;&nbsp;')),
+              components.link('users/' + u.id, 'Edit'),
+              m.el('a',{
+                onclick: function(evt){
+                  evt.preventDefault();
+                  ctrl.remove(u);
+                },
+                href: '#'
+              }, 'Delete')
+            ]);
+          })),
+          m.el('div',{style:'display:' + (ctrl.model.incomplete() ? 'block' : 'none')},'loading'),
+          m.importModule("Header.footer")
+        ]
+
+        return html;
+      };
+      
+      m.addModule(Users);
+      
+      
+      
+      var User = m.boiler();
+      User.path = "/users/:userID";
+      User.model = function(){
+        GlobalModels.User.apply(this);
+        this.incomplete = m.prop(true);
+      };
+      User.controller = function(){
+        var self = this;
+
+        m.ajax.get("/getUsers", {}, function(err, response){
+          var i = 0;
+          while(i < response.users.length){
+            if(response.users[i].id == m.route.param("userID")){
+              self.model.fname = response.users[i].fname;
+              self.model.lname = response.users[i].lname;
+              self.model.id = response.users[i].id;
+
+              break;
+            }
+            i++;
+          }
+          self.model.incomplete(false);
+        });
+
+      };
+      User.view = function(ctrl){
+        var stack = [];
+        if(ctrl.model.incomplete()){
+          stack.push(m.el('div','loading'));
+        }else{
+          stack.push(m('div', [
+            m.el('h3',ctrl.model.fname + " " + ctrl.model.lname),
+            components.link('users', 'Go Back')
+          ]));
+        }
+
+        return stack;
+      };
+      
+      m.addModule(User);
+      
+      var Header = m.boiler();
+      Header.name = "Header";
+      Header.model = function(){
+        this.text = m.prop('');
+      };
+      Header.controller = function(){
+        var self = this;
+        setTimeout(function(){
+          m.startComputation()
+          self.model.text(Math.floor((Math.random() * 10) + 1));
+          m.endComputation()
+        },1500);
+      };
+      Header.view = function(ctrl){
+        return m.el('h2', {onmouseenter: function(evt){console.log(evt.target)}},ctrl.model.text());
+      };
+      
+      m.addModule(Header);
+
+      m.buildRoutes(document.body);
+
+    };
+  </script>
+</head>
+
+<body>
+  
+</body>
+</html>
