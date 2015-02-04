@@ -63,20 +63,22 @@ removeEl = (node) ->
 #
 # @nodoc
 #
-defaultUnloader = () ->
-  detachAllEvents()
+defaultUnloader = (root) ->
+  detachAllEvents(root)
   return
 
 #
 # @nodoc
 #
-detachAllEvents = () ->
-  while m.withAttachedEvents.length
-    t = m.withAttachedEvents[0]
-    for own ok, f of t.eventsMaps
-      t.removeEventListener(ok, f)
-    removeEl(t) unless document.body.contains(t)
-    m.withAttachedEvents.splice(0, 1)
+detachAllEvents = (root) ->
+  for el, idx in m.withAttachedEvents when el and (root.contains(el) or not document.body.contains(el))
+    for own ok, f of el.eventsMaps
+      el.removeEventListener(ok, f)
+    removeEl(el) unless document.body.contains(el)
+    m.withAttachedEvents[idx] = null
+  
+  for el, idx in m.withAttachedEvents when not el
+    m.withAttachedEvents.splice(idx, 1)
   return
 
 #
@@ -110,12 +112,11 @@ importModule = (module) ->
 
   if typeof module is 'string'
     moduleName = if module.indexOf('.') > -1 then module.substr(0, module.indexOf('.')) else module
-    found = appModules.filter((r) ->
-      r.name is moduleName
-    )
-    if found.length
-      cont = imported[module] or new buildImported(found[0], module)
-      return found[0].view.apply(found[0], [cont])
+    found = getModule(moduleName)
+    
+    if found
+      cont = imported[module] or new buildImported(found, module)
+      return found.view.apply(found, [cont])
   else if typeof module is 'object'
     cont = if imported[module.name] is undefined then new buildImported(module) else imported[module.name]
     return module.view.apply(module, [cont])
@@ -126,6 +127,24 @@ importModule = (module) ->
 # @nodoc
 #
 m.importModule = importModule
+
+
+# Return a reference to a module registered with addModule
+#
+# @param  {String} module the name module to get
+# @return {Object} the module, if found, or null if not
+#
+getModule = (module) ->
+  found = appModules.filter((r) ->
+    r.name is module
+  )
+
+  found[0] or null
+
+#
+# @nodoc
+#
+m.getModule = getModule
 
 # A proxy for the Mithril m() method so that events are wired up so as to be destroyed properly on module unload
 #
@@ -179,6 +198,21 @@ el = (str, hashOrChildren, children) ->
 #
 m.el = el
 
+#
+# @nodoc
+#
+buildController = (route, DOMRoot) ->
+  ->
+    @model = new route.model()
+    route.controller.call(@)
+    Object.preventExtensions(@model)
+
+    ou = @onunload or (->)
+    @onunload = () ->
+      defaultUnloader(DOMRoot)
+      ou()
+
+    Object.preventExtensions(@)
 
 # Take all modules added with addModule(), and initialize all the routes so the app can be used
 #
@@ -187,41 +221,53 @@ m.el = el
 buildRoutes = (DOMRoot) ->
   routeHash = {}
   nameHash = {}
+  empty = true
   
   m.route.mode = "hash"
-  
+
   ((route)->
     if nameHash[route.name] isnt undefined
       console.warn('Module',route.name,'already exists')
       return
-
+    
+    empty = false
     nameHash[route.name] = true
     route.model = route.model or (->)
     routeHash[route.path] = 
-      controller: ->
-        @model = new route.model()
-        route.controller.call(@)
-        Object.preventExtensions(@model)
-
-        ou = @onunload or (->)
-        @onunload = () ->
-          defaultUnloader()
-          ou()
-
-        Object.preventExtensions(@)
+      controller: buildController(route, DOMRoot)
 
       view: route.view
-      
-    
+
   )(route) for route in appModules when route.path
-  
-  m.route(DOMRoot, '/', routeHash)
+  if routeHash['/'] is undefined
+    console.error('Missing base route with path "/"')
+    return
+  m.route(DOMRoot, '/', routeHash) unless empty
 
 
 #
 # @nodoc
 #
 m.buildRoutes = buildRoutes
+
+
+# Take all modules added with addModule(), and initialize all the routes so the app can be used
+#
+# @param  {Object} DOMRoot the HTML DOM element to render the module inside of
+# @param  {String} module the name property of the registered module to import
+#
+renderModule = (DOMRoot, moduleName) ->
+  found = getModule(moduleName)
+  if found
+    m.module(DOMRoot, 
+      controller: buildController(found, DOMRoot)
+      view: found.view
+    )
+
+#
+# @nodoc
+#
+m.renderModule = renderModule
 
 
 # A helper for all types of ajax requests: m.ajax.get(), m.ajax.delete(), m.ajax.post(), m.ajax.put(), m.ajax.head(), each non-blocking unlike the m.request() method

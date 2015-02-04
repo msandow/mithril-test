@@ -123,6 +123,18 @@
   </li>
   <li>
     <span class='signature'>
+      <a href='#getModule-'>
+        ~
+(Object)
+<b>getModule</b><span>(module)</span>
+      </a>
+    </span>
+    <span class='desc'>
+      Return a reference to a module registered with addModule 
+    </span>
+  </li>
+  <li>
+    <span class='signature'>
       <a href='#el-'>
         ~
 (Object)
@@ -139,6 +151,18 @@
         ~
 (void)
 <b>buildRoutes</b><span>(DOMRoot)</span>
+      </a>
+    </span>
+    <span class='desc'>
+      Take all modules added with addModule(), and initialize all the routes so the app can be used 
+    </span>
+  </li>
+  <li>
+    <span class='signature'>
+      <a href='#renderModule-'>
+        ~
+(void)
+<b>renderModule</b><span>(DOMRoot, moduleName)</span>
       </a>
     </span>
     <span class='desc'>
@@ -316,6 +340,43 @@
 </div>
   </div>
   <div class='method_details'>
+    <p class='signature' id='getModule-'>
+      ~
+(Object)
+<b>getModule</b><span>(module)</span>
+      <br>
+    </p>
+    <div class='docstring'>
+  <p>Return a reference to a module registered with addModule</p>
+</div>
+<div class='tags'>
+  <h3>Parameters:</h3>
+  <ul class='param'>
+    <li>
+      <span class='name'>module</span>
+      <span class='type'>
+        (
+          <tt>String</tt>
+        )
+      </span>
+      &mdash;
+      <span class='desc'>the name module to get </span>
+    </li>
+  </ul>
+  <h3>Returns:</h3>
+  <ul class='return'>
+    <li>
+      <span class='type'></span>
+      (
+        <tt>Object</tt>
+      )
+      &mdash;
+      <span class='desc'>the module, if found, or null if not </span>
+    </li>
+  </ul>
+</div>
+  </div>
+  <div class='method_details'>
     <p class='signature' id='el-'>
       ~
 (Object)
@@ -463,10 +524,46 @@
   </ul>
 </div>
   </div>
+  <div class='method_details'>
+    <p class='signature' id='renderModule-'>
+      ~
+(void)
+<b>renderModule</b><span>(DOMRoot, moduleName)</span>
+      <br>
+    </p>
+    <div class='docstring'>
+  <p>Take all modules added with addModule(), and initialize all the routes so the app can be used</p>
+</div>
+<div class='tags'>
+  <h3>Parameters:</h3>
+  <ul class='param'>
+    <li>
+      <span class='name'>DOMRoot</span>
+      <span class='type'>
+        (
+          <tt>Object</tt>
+        )
+      </span>
+      &mdash;
+      <span class='desc'>the HTML DOM element to render the module inside of </span>
+    </li>
+    <li>
+      <span class='name'>module</span>
+      <span class='type'>
+        (
+          <tt>String</tt>
+        )
+      </span>
+      &mdash;
+      <span class='desc'>the name property of the registered module to import </span>
+    </li>
+  </ul>
+</div>
+  </div>
 </div>
     </div>
     <div id='footer'>
-  February 02, 15 15:35:06 by
+  February 04, 15 12:38:07 by
   <a href='https://github.com/coffeedoc/codo' title='CoffeeScript API documentation generator'>
     Codo
   </a>
