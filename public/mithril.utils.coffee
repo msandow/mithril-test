@@ -15,7 +15,7 @@ boiler = (configs = {}) ->
     path: configs.path || null,
     name: configs.name || "",
     model: configs.model || (->),
-    controller: configs.controller || ((model)->),
+    controller: configs.controller || (()->),
     view: configs.view || ((ctrl)->)
   }
 
@@ -109,6 +109,7 @@ importModule = (module) ->
     @model = new mod.model()
     mod.controller.call(@)
     imported[cacheKey] = @
+    @
 
   if typeof module is 'string'
     moduleName = if module.indexOf('.') > -1 then module.substr(0, module.indexOf('.')) else module
@@ -214,6 +215,7 @@ buildController = (route, DOMRoot) ->
 
     Object.preventExtensions(@)
 
+
 # Take all modules added with addModule(), and initialize all the routes so the app can be used
 #
 # @param  {Object} DOMRoot the HTML DOM element to render all routed modules inside of
@@ -235,13 +237,14 @@ buildRoutes = (DOMRoot) ->
     route.model = route.model or (->)
     routeHash[route.path] = 
       controller: buildController(route, DOMRoot)
-
       view: route.view
 
   )(route) for route in appModules when route.path
+
   if routeHash['/'] is undefined
     console.error('Missing base route with path "/"')
     return
+
   m.route(DOMRoot, '/', routeHash) unless empty
 
 
@@ -293,11 +296,9 @@ ajax =
       for own key, val of data
         qs.push(encodeURIComponent("#{key}=#{val}"))
       
-      if requestOptions.url.indexOf("?") > -1
-        requestOptions.url += "&" + qs.join("&")
-      else
-        requestOptions.url += "?" + qs.join("&")
-    
+      requestOptions.url += if requestOptions.url.indexOf("?") > -1 then "&" else "?"
+      requestOptions.url += qs.join("&")
+
     m.request(requestOptions)
       .then(
         (response) ->

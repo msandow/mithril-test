@@ -83,7 +83,15 @@
             },500);
           },
           view: function(ctrl){
-            return m.el('h4',ctrl.model.text());
+            return [
+              m.el('h4',ctrl.model.text()),
+              m.el('a[href="#"]', {
+                onclick: function(evt){
+                  evt.preventDefault();
+                  console.log(m.getModule('Navigation').currentModel.links().push({text: 'Home', link: '/home'}))
+                }
+              }, 'push')
+            ];
           }
         }));
       };

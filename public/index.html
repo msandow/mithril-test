@@ -122,6 +122,8 @@
         this.remove = function(u){
           this.model.users.splice(this.model.users.indexOf(u),1);
         };
+
+        console.log(m.getModule('Header'))
       }
       Users.view = function(ctrl){
         html = [
