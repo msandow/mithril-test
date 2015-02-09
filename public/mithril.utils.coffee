@@ -5,24 +5,24 @@
 # @param  {Object} configs constructor object with optional path, name, model, controller and view properties
 # @option configs {String} path the URL route path to the module
 # @option configs {String} name the name of the module as used when importing it into another module
-# @option configs {Function} model the model class function describing the properties in the model
+# @option configs {Object} model the model object describing the properties in the model
 # @option configs {Function} controller the module controller function
 # @option configs {Function} view the module view function
 # @return {Object} a module object with path, name, model, controller and view properties extended from the configs
 #
-boiler = (configs = {}) ->
-  {
-    path: configs.path || null,
-    name: configs.name || "",
-    model: configs.model || (->),
-    controller: configs.controller || (()->),
-    view: configs.view || ((ctrl)->)
-  }
+create = (configs = {}) ->
+  Object.preventExtensions({
+    path: configs.path or null
+    name: configs.name or ""
+    model: configs.model or {}
+    controller: configs.controller or (->)
+    view: configs.view or (->)
+  })
 
 #
 # @nodoc
 #
-m.boiler = boiler
+m.create = create
 
 #
 # @nodoc
@@ -35,6 +35,7 @@ appModules = []
 # @return {Object} a pointer back to the Mithril m object
 #
 addModule = (module = m.boiler()) ->
+  Object.preventExtensions(module.model)
   appModules.push(module)
   m
 
@@ -106,21 +107,16 @@ attachEvents = (el, evts) ->
 #
 importModule = (module) ->
   buildImported = (mod, cacheKey) ->
-    @model = new mod.model()
-    mod.controller.call(@)
-    imported[cacheKey] = @
-    @
+    imp = new mod.controller();
+    imported[cacheKey] = imp
+    imp
 
-  if typeof module is 'string'
-    moduleName = if module.indexOf('.') > -1 then module.substr(0, module.indexOf('.')) else module
-    found = getModule(moduleName)
-    
-    if found
-      cont = imported[module] or new buildImported(found, module)
-      return found.view.apply(found, [cont])
-  else if typeof module is 'object'
-    cont = if imported[module.name] is undefined then new buildImported(module) else imported[module.name]
-    return module.view.apply(module, [cont])
+  moduleName = if module.indexOf('.') > -1 then module.substr(0, module.indexOf('.')) else module
+  found = getModule(moduleName)
+
+  if found
+    cont = imported[module] or buildImported(found, module)
+    return found.view.apply(found, [cont])
     
   return null
 
@@ -204,10 +200,7 @@ m.el = el
 #
 buildController = (route, DOMRoot) ->
   ->
-    @model = new route.model()
     route.controller.call(@)
-    Object.preventExtensions(@model)
-
     ou = @onunload or (->)
     @onunload = () ->
       defaultUnloader(DOMRoot)
@@ -231,10 +224,9 @@ buildRoutes = (DOMRoot) ->
     if nameHash[route.name] isnt undefined
       console.warn('Module',route.name,'already exists')
       return
-    
+
     empty = false
     nameHash[route.name] = true
-    route.model = route.model or (->)
     routeHash[route.path] = 
       controller: buildController(route, DOMRoot)
       view: route.view

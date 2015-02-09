@@ -28,19 +28,14 @@
         }
       };
 
-      var Navigation = m.boiler();
-      Navigation.name = "Navigation";
-      Navigation.model = function(){
-        this.links = m.prop([
-          {text: 'Home', link: '/home'},
-          {text: 'About', link: '/about'}
-        ]);
-      };
-      Navigation.controller = function(){
-        
-      };
+      var Navigation = m.create({
+        name: "Navigation",
+        model: {
+          links: [{text: 'Home', link: '/home'},{text: 'About', link: '/about'}]
+        }
+      });
       Navigation.view = function(ctrl){
-        return ctrl.model.links().map(function(l){
+        return Navigation.model.links.map(function(l){
           var li = components.link(l.link, l.text);
 
           if(m.route() === l.link){
@@ -49,19 +44,14 @@
           
           return li;
         });
-      };      
+      };
       
       m.addModule(Navigation);
-      
-      var Empty = m.boiler();
-      Empty.name = "Empty";
-      Empty.path = "/";
-      Empty.model = function(){
-        
-      };
-      Empty.controller = function(){
-        
-      };
+
+      var Empty = m.create({
+        name: 'Empty',
+        path: '/'
+      });
       Empty.view = function(ctrl){
         return null
       };      
@@ -69,31 +59,33 @@
       m.addModule(Empty);
       
       var simple = function(name, route){
-        m.addModule(m.boiler({
+        var newModule = m.create({
           name: name,
           path: route,
-          model: function(){
-            this.text = m.prop('');
-          },
-          controller: function(){
-            var self = this;
-            setTimeout(function(){              
-              self.model.text(name);
-              m.redraw();
-            },500);
-          },
-          view: function(ctrl){
-            return [
-              m.el('h4',ctrl.model.text()),
-              m.el('a[href="#"]', {
-                onclick: function(evt){
-                  evt.preventDefault();
-                  console.log(m.getModule('Navigation').currentModel.links().push({text: 'Home', link: '/home'}))
-                }
-              }, 'push')
-            ];
+          model: {
+            text: ''
           }
-        }));
+        });
+        newModule.controller = function(){
+          setTimeout(function(){              
+            newModule.model.text = name;
+            m.redraw();
+          },500);
+        };
+        newModule.view = function(ctrl){
+          return [
+            m.el('h4',newModule.model.text),
+            m.el('a[href="#"]', {
+              onclick: function(evt){
+                evt.preventDefault();
+                Navigation.model.links.push({text: 'Return', link: '/home'});
+              }
+            }, 'push')
+          ];
+        };
+
+        m.addModule(newModule);
+        return newModule;
       };
 
       simple('Home', '/home');
