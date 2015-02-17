@@ -1,5 +1,4 @@
 "use strict"
-
 # Create a boiler-plate Mithril module with all the default module properties.
 #
 # @param  {Object} configs constructor object with optional path, name, model, controller and view properties
@@ -11,13 +10,100 @@
 # @return {Object} a module object with path, name, model, controller and view properties extended from the configs
 #
 create = (configs = {}) ->
-  Object.preventExtensions({
+  o = 
     path: configs.path or null
     name: configs.name or ""
-    model: configs.model or {}
+    view: configs.view or (-> null)
     controller: configs.controller or (->)
-    view: configs.view or (->)
-  })
+
+  switcher = (ob, k, v) ->
+    if ['number','string','boolean','null','undefined'].indexOf(typeof v) > -1 or Array.isArray(v)
+      Object.defineProperty(ob, '___' + k,
+        configurable: false
+        enumerable: false
+        writable: false
+        value: m.prop(v)
+      )
+      
+      Object.defineProperty(ob, k,
+        configurable: false
+        enumerable: true
+        writable: false
+        value: (v) ->
+          if v is undefined
+            return ob['___' + k]()
+          else
+            if typeof v is 'object'
+              if not Array.isArray(v)
+                ob['___' + k](objectCreator(v))
+              else
+                ob['___' + k](v.map((ii)->
+                  if typeof ii is 'object' and not Array.isArray(ii)
+                    return objectCreator(ii)
+                  else
+                    return ii
+                ))
+            else
+              ob['___' + k](v)
+      )
+    else if typeof v is 'function'
+      ob[k] = v
+    else if typeof v is 'object'
+      ob[k] = m.prop(objectCreator(v))
+  
+  objectCreator = (ob) ->
+    _o = {}
+
+    for own k,v of ob
+      switcher(_o, k, v)
+    
+    Object.preventExtensions(_o)
+    
+  cloner = (ob) ->
+    if Array.isArray(ob)
+      newob = []
+      for v in ob
+        if typeof v is 'object'
+          newob.push(cloner(v))
+        else
+          newob.push(v)
+    else
+      newob = {}
+      for own k, v of ob
+        if typeof v is 'object'
+          newob[k] = cloner(v)
+        else
+          newob[k] = v
+        
+    newob
+    
+  replace = (destination, source) ->
+    for own k, v of source when destination[k] isnt undefined
+      if ['number','string','boolean','null','undefined'].indexOf(typeof v) > -1 or Array.isArray(v)
+        destination[k](v)
+      else if typeof v is 'object'
+        destination[k] = replace(destination[k], v)
+      
+  o.reset = ()->
+    o.model = configs.model
+
+  Object.defineProperty(o, '___model',
+    configurable: false
+    enumerable: false
+    writable: true
+    value: objectCreator(cloner(configs.model or {}))
+  )
+  
+  Object.defineProperty(o, 'model',
+    configurable: false
+    enumerable: true
+    set: (v)->
+      o.___model = objectCreator(cloner(v))
+    get: ()->
+      o.___model
+  )
+
+  Object.preventExtensions(o)
 
 #
 # @nodoc
@@ -35,7 +121,6 @@ appModules = []
 # @return {Object} a pointer back to the Mithril m object
 #
 addModule = (module = m.boiler()) ->
-  Object.preventExtensions(module.model)
   appModules.push(module)
   m
 
@@ -78,8 +163,10 @@ detachAllEvents = (root) ->
     removeEl(el) unless document.body.contains(el)
     m.withAttachedEvents[idx] = null
   
-  for el, idx in m.withAttachedEvents when not el
-    m.withAttachedEvents.splice(idx, 1)
+  m.withAttachedEvents = m.withAttachedEvents.filter((e)->
+    e isnt null
+  )
+
   return
 
 #
@@ -107,7 +194,7 @@ attachEvents = (el, evts) ->
 #
 importModule = (module) ->
   buildImported = (mod, cacheKey) ->
-    imp = new mod.controller();
+    imp = new mod.controller()
     imported[cacheKey] = imp
     imp
 
@@ -200,11 +287,13 @@ m.el = el
 #
 buildController = (route, DOMRoot) ->
   ->
+    route.reset()
     route.controller.call(@)
-    ou = @onunload or (->)
-    @onunload = () ->
-      defaultUnloader(DOMRoot)
-      ou()
+    if DOMRoot
+      ou = @onunload or (->)
+      @onunload = () ->
+        defaultUnloader(DOMRoot)
+        ou()
 
     Object.preventExtensions(@)
 
@@ -229,7 +318,7 @@ buildRoutes = (DOMRoot) ->
     nameHash[route.name] = true
     routeHash[route.path] = 
       controller: buildController(route, DOMRoot)
-      view: route.view
+      view: route.view.bind(route)
 
   )(route) for route in appModules when route.path
 
@@ -256,7 +345,7 @@ renderModule = (DOMRoot, moduleName) ->
   if found
     m.module(DOMRoot, 
       controller: buildController(found, DOMRoot)
-      view: found.view
+      view: found.view.bind(found)
     )
 
 #
