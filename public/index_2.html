@@ -22,7 +22,7 @@
             m.route(href);
             ooc();
           };
-          conf.href = "/" + href;
+          conf.href = href;
           
           return m.el("a", conf, text);
         }
@@ -30,11 +30,16 @@
 
       var Navigation = m.create({
         name: "Navigation",
-        model: {
-          links: [{text: 'Home', link: '/home'},{text: 'About', link: '/about'}]
+        model: function(){
+          this.links = [{text: 'Home', link: '/home'},{text: 'About', link: '/about'}];
+        },
+        controller: function(){
+          m.on(document.querySelector('#nav'), 'mouseenter', 'a', function(){
+            console.log(this);
+          });
         },
         view: function(ctrl){
-          return Navigation.model.links().map(function(l){
+          return Navigation.model.links.map(function(l){
             var li = components.link(l.link, l.text);
 
             if(m.route() === l.link){
@@ -59,37 +64,40 @@
         var newModule = m.create({
           name: name,
           path: route,
-          model: {
-            text: ''
+          model: function(){
+            this.toggle = false;
+            this.text = '';
+          },
+          unload: function(){
+            console.log(this)
           },
           controller: function(){
             setTimeout(function(){
               m.startComputation();
-              newModule.model.text(name);
+              newModule.model.text = name;
               m.endComputation();
             },500);
           },
           view: function(ctrl){
             return [
-              m.el('h4',newModule.model.text()),
+              m.el('h4',(newModule.model.toggle ? '- ' : '') + newModule.model.text),
               m.el('a[href="#"]', {
                 onclick: function(evt){
                   evt.preventDefault();
-                  Navigation.model.links().push({text: 'Return', link: '/home'});
+                  Navigation.model.links.push({text: 'Return', link: '/home'});
                 }
               }, 'push')
             ];
           }
         });
 
-        m.addModule(newModule);
-        return newModule;
+        return m.addModule(newModule);
       };
 
-      simple('Home', '/home');
+      simple('Home', ['/home','/homeagain']);
       simple('About', '/about');
 
-      m.renderModule(document.querySelector('#nav'), 'Navigation');
+      m.renderModule(document.querySelector('#nav'), Navigation);
       m.buildRoutes(document.querySelector('#body'));
 
     };

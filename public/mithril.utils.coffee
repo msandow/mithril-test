@@ -1,4 +1,18 @@
 "use strict"
+
+#
+# @nodoc
+#
+isObject = (v) ->
+  typeof v is 'object' and not Array.isArray(v) and v isnt null
+
+#
+# @nodoc
+#
+selectorMatches = (el, selector) ->
+  method = el.matches or el.msMatchesSelector or el.mozMatchesSelector or el.webkitMatchesSelector or el.oMatchesSelector or false
+  if method then method.apply(el, [selector]) else false
+
 # Create a boiler-plate Mithril module with all the default module properties.
 #
 # @param  {Object} configs constructor object with optional path, name, model, controller and view properties
@@ -15,92 +29,31 @@ create = (configs = {}) ->
     name: configs.name or ""
     view: configs.view or (-> null)
     controller: configs.controller or (->)
+    unload: configs.unload or (->)
 
-  switcher = (ob, k, v) ->
-    if ['number','string','boolean','null','undefined'].indexOf(typeof v) > -1 or Array.isArray(v)
-      Object.defineProperty(ob, '___' + k,
-        configurable: false
-        enumerable: false
-        writable: false
-        value: m.prop(v)
-      )
-      
-      Object.defineProperty(ob, k,
-        configurable: false
-        enumerable: true
-        writable: false
-        value: (v) ->
-          if v is undefined
-            return ob['___' + k]()
-          else
-            if typeof v is 'object'
-              if not Array.isArray(v)
-                ob['___' + k](objectCreator(v))
-              else
-                ob['___' + k](v.map((ii)->
-                  if typeof ii is 'object' and not Array.isArray(ii)
-                    return objectCreator(ii)
-                  else
-                    return ii
-                ))
-            else
-              ob['___' + k](v)
-      )
-    else if typeof v is 'function'
-      ob[k] = v
-    else if typeof v is 'object'
-      ob[k] = m.prop(objectCreator(v))
-  
-  objectCreator = (ob) ->
-    _o = {}
-
-    for own k,v of ob
-      switcher(_o, k, v)
-    
-    Object.preventExtensions(_o)
-    
-  cloner = (ob) ->
-    if Array.isArray(ob)
-      newob = []
-      for v in ob
-        if typeof v is 'object'
-          newob.push(cloner(v))
-        else
-          newob.push(v)
-    else
-      newob = {}
-      for own k, v of ob
-        if typeof v is 'object'
-          newob[k] = cloner(v)
-        else
-          newob[k] = v
-        
-    newob
-    
-  replace = (destination, source) ->
-    for own k, v of source when destination[k] isnt undefined
-      if ['number','string','boolean','null','undefined'].indexOf(typeof v) > -1 or Array.isArray(v)
-        destination[k](v)
-      else if typeof v is 'object'
-        destination[k] = replace(destination[k], v)
-      
-  o.reset = ()->
-    o.model = configs.model
-
-  Object.defineProperty(o, '___model',
-    configurable: false
-    enumerable: false
-    writable: true
-    value: objectCreator(cloner(configs.model or {}))
-  )
-  
-  Object.defineProperty(o, 'model',
-    configurable: false
-    enumerable: true
-    set: (v)->
-      o.___model = objectCreator(cloner(v))
-    get: ()->
-      o.___model
+  Object.defineProperties(o, 
+    model:
+      configurable: false
+      enumerable: false
+      writable: true
+      value: new (configs.model or (->))()
+    reset: 
+      configurable: false
+      enumerable: false
+      writable: false
+      value: ()->
+        o.model = new (configs.model or (->))()
+    serialize: 
+      configurable: false
+      enumerable: true
+      writable: false
+      value: ()->
+        JSON.stringify(o.model)
+    events:
+      configurable: false
+      enumerable: true
+      writable: false
+      value: Object.preventExtensions(configs.events or {})
   )
 
   Object.preventExtensions(o)
@@ -120,9 +73,9 @@ appModules = []
 # @param  {Object} module a module object with a signature matching that created by the {boiler boiler method}
 # @return {Object} a pointer back to the Mithril m object
 #
-addModule = (module = m.boiler()) ->
+addModule = (module = m.create()) ->
   appModules.push(module)
-  m
+  module
 
 #
 # @nodoc
@@ -150,6 +103,7 @@ removeEl = (node) ->
 # @nodoc
 #
 defaultUnloader = (root) ->
+  imported = {}
   detachAllEvents(root)
   return
 
@@ -162,17 +116,17 @@ detachAllEvents = (root) ->
       el.removeEventListener(ok, f)
     removeEl(el) unless document.body.contains(el)
     m.withAttachedEvents[idx] = null
-  
+
   m.withAttachedEvents = m.withAttachedEvents.filter((e)->
     e isnt null
   )
-
+  
   return
 
 #
 # @nodoc
 #
-attachEvents = (el, evts) ->
+attachEventsToElement = (el, evts) ->
   el.eventsMaps = el.eventsMaps or {}
 
   for own key, evt of evts
@@ -186,6 +140,52 @@ attachEvents = (el, evts) ->
     m.withAttachedEvents.push(el)
   
   return
+
+# Bind a global event to an element and inspect for those events on sub-elements
+#
+# @param  {Element} parent DOM element to listen and inspect on
+# @param {String} event string name of the event to listen for
+# @param {String} selector string selector for sub-elements to listen for events from
+# @param {Function} event function to fire
+#
+captureOn = (el, evt, selector, func) ->
+  el.eventsMaps = el.eventsMaps or {}
+  hash = evt + ' : ' + selector
+  
+  if el.eventsMaps[hash] is undefined
+    captureFunc = (evt) ->
+      if selectorMatches(evt.target, selector)
+        m.startComputation()
+        func.apply(evt.target,[evt])
+        m.endComputation()
+
+    el.eventsMaps[hash] = captureFunc
+    el.addEventListener(evt, captureFunc, true)
+  return
+  
+#
+# @nodoc
+#
+m.on = captureOn
+
+# Remove a previous global event to an element and inspect for those events on sub-elements
+#
+# @param  {Element} parent DOM element to listen and inspect on
+# @param {String} selector string selector for sub-elements to listen for events from
+# @param {String} event string name of the event to listen for
+#
+captureOff = (el, selector, evt) ->
+  hash = evt + ' : ' + selector
+  if el.eventsMaps and el.eventsMaps[hash]
+    el.removeEventListener(evt, el.eventsMaps[hash], true)
+    delete el.eventsMaps[hash]
+  return
+
+
+#
+# @nodoc
+#
+m.off = captureOff
 
 # Import an existing registered module, by name, into the view of another module. Useful for partials.
 #
@@ -202,7 +202,7 @@ importModule = (module) ->
   found = getModule(moduleName)
 
   if found
-    cont = imported[module] or buildImported(found, module)
+    cont = if imported[moduleName] then imported[moduleName] else buildImported(found, moduleName)
     return found.view.apply(found, [cont])
     
   return null
@@ -219,11 +219,17 @@ m.importModule = importModule
 # @return {Object} the module, if found, or null if not
 #
 getModule = (module) ->
-  found = appModules.filter((r) ->
-    r.name is module
-  )
+  if typeof module is 'string'
+    found = appModules.filter((r) ->
+      r.name is module
+    )
 
-  found[0] or null
+    return found[0] or null
+  else
+    for m in appModules
+      return m if m is module
+    
+    return null
 
 #
 # @nodoc
@@ -263,7 +269,7 @@ el = (str, hashOrChildren, children) ->
     o_config = hashOrChildren.config or (->)
 
     hashOrChildren.config = (element, isInitialized, context) ->
-      attachEvents(element, eventHash) unless isInitialized
+      attachEventsToElement(element, eventHash) unless isInitialized
       o_config.apply(this, [element, isInitialized, context])
       return
     
@@ -289,11 +295,16 @@ buildController = (route, DOMRoot) ->
   ->
     route.reset()
     route.controller.call(@)
+    
+    for own hash, func of route.events
+      [full, evt, spaces, selector] = hash.match(/(\w+)([\s\t]+)(\w+)/i)
+      m.on(document.body, evt, selector, func)
+    
     if DOMRoot
-      ou = @onunload or (->)
+      ou = route.unload or (->)
       @onunload = () ->
         defaultUnloader(DOMRoot)
-        ou()
+        ou.call(route)
 
     Object.preventExtensions(@)
 
@@ -316,11 +327,17 @@ buildRoutes = (DOMRoot) ->
 
     empty = false
     nameHash[route.name] = true
-    routeHash[route.path] = 
-      controller: buildController(route, DOMRoot)
-      view: route.view.bind(route)
+    if Array.isArray(route.path)
+      for subroute in route.path
+        routeHash[subroute] = 
+          controller: buildController(route, DOMRoot)
+          view: route.view.bind(route)
+    else
+      routeHash[route.path] = 
+        controller: buildController(route, DOMRoot)
+        view: route.view.bind(route)
 
-  )(route) for route in appModules when route.path
+  )(route) for route in appModules when route.path and route.path.length
 
   if routeHash['/'] is undefined
     console.error('Missing base route with path "/"')

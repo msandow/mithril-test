@@ -33,40 +33,48 @@
 
       var UserHeader = m.create({
         name: "UserHeader",
-        model: {
-          LoggedInUser: new GlobalModels.User()
+        model: function(){
+          this.LoggedInUser = new GlobalModels.User();
+          this.lastLoggedIn = {time: null};
         },
         controller: function(){
           this.login = function(){
-            UserHeader.model.LoggedInUser().fname('Mr');
-            UserHeader.model.LoggedInUser().lname('Bob');
-            UserHeader.model.LoggedInUser().id(55678);
+            UserHeader.model.LoggedInUser.fname = 'Mr';
+            UserHeader.model.LoggedInUser.lname = 'Bob' ;
+            UserHeader.model.LoggedInUser.id = 55678;
+            UserHeader.model.lastLoggedIn.time = Date.now();
           };
 
           this.logout = function(){
-            UserHeader.model.LoggedInUser().id("");
+            UserHeader.model.LoggedInUser.id = "";
           };
         },
         view: function(ctrl){
-          var u = UserHeader.model.LoggedInUser();
-          var name = !u.id() ? 'Guest' : u.fname() + ' ' + u.lname();
-          var p = m.el('p',[
+          var u = UserHeader.model.LoggedInUser;
+          var name = !u.id ? 'Guest' : u.fname + ' ' + u.lname;
+          var p = [
             m.el('i', name)
-          ]);
+          ];
 
-          p.append(m.el('a[href="#"]',{
+          p.push(m.el('a[href="#"]',{
             onclick: function(evt){
               evt.preventDefault();
 
-              if(!u.id()){
+              if(!u.id){
                 ctrl.login();
               }else{
                 ctrl.logout();
               }
             }
-          }, !u.id() ? 'login' : 'logout'));
+          }, !u.id ? 'login' : 'logout'));
 
-          return p;
+          if(u.id){
+            p.push(m.el('span',[
+              m.trust('&nbsp; -' + UserHeader.model.lastLoggedIn.time)
+            ]));
+          }
+
+          return m.el('p',p);
         }
       });
       
@@ -75,25 +83,35 @@
       var Index = m.create({
         path: "/",
         name: "Home",
-        model: {
-          links: [],
-          title: '',
-          linkObject: function(text, href){
+        model: function(){
+          this.links = [];
+          this.title = '';
+          this.linkObject = function(text, href){
             this.text = text || '';
             this.href = href || '';
+          };
+        },
+        events: {
+          'mouseleave   h6': function(){
+            console.dir(this);
           }
         },
         controller: function(){
-          m.ajax.post("/getter", {id: 'foo'}, function(err, response){
-            Index.model.title(response.string);
+          m.on(document.body, 'mouseenter', 'h6', function(){
+            console.dir(this);
           });
-          Index.model.links().push(new Index.model.linkObject('Search Users', 'users'));
+
+          m.ajax.post("/getter", {id: 'foo'}, function(err, response){
+            Index.model.title = response.string;
+          });
+
+          Index.model.links.push(new Index.model.linkObject('Search Users', 'users'));
         },
         view: function(ctrl){
           return [
             m.importModule("UserHeader"),
-            m.el('h6',Index.model.title()),
-            m.el('nav',{class: 'nav'}, Index.model.links().map(function(l){
+            m.el('h6',Index.model.title),
+            m.el('nav',{class: 'nav'}, Index.model.links.map(function(l){
               return components.link(l.href, l.text);
             }))
           ];
@@ -105,28 +123,28 @@
       var Users = m.create({
         path: "/users",
         name: "Users",
-        model: {
-          users: [],
-          incomplete: true,
-          userObj: GlobalModels.User
+        model: function(){
+          this.users = [];
+          this.incomplete = true;
+          this.userObj = GlobalModels.User;
         },
         controller: function(){
           m.ajax.get("/getUsers", {}, function(err, response){
-            Users.model.users(response.users.map(function(i){
+            Users.model.users = response.users.map(function(i){
               return new Users.model.userObj(i.fname, i.lname, i.id);
-            }));
-            Users.model.incomplete(false);
+            });
+            Users.model.incomplete = false;
           });
 
           this.remove = function(u){
-            Users.model.users().splice(Users.model.users().indexOf(u),1);
+            Users.model.users.splice(Users.model.users.indexOf(u),1);
           };
         },
         view: function(ctrl){
           var html = [
             m.importModule("UserHeader"),
             m.importModule("Header.header"),
-            m.el('div', Users.model.users().map(function(u){
+            m.el('div', Users.model.users.map(function(u){
               return m.el('p', {
                   key: u.id,
                   class: 'user',
@@ -134,9 +152,9 @@
                     //console.log(e)
                   }
                 }, [
-                m.el('span', u.fname() + ' ' + u.lname()),
+                m.el('span', u.fname + ' ' + u.lname),
                 m.el('span', m.trust('&nbsp;&nbsp;&nbsp;')),
-                components.link('users/' + u.id(), 'Edit'),
+                components.link('users/' + u.id, 'Edit'),
                 m.el('a',{
                   onclick: function(evt){
                     evt.preventDefault();
@@ -146,7 +164,7 @@
                 }, 'Delete')
               ]);
             })),
-            m.el('div',{style:'display:' + (Users.model.incomplete() ? 'block' : 'none')},'loading'),
+            m.el('div',{style:'display:' + (Users.model.incomplete ? 'block' : 'none')},'loading'),
             m.importModule("Header.footer")
           ];
 
@@ -159,36 +177,36 @@
 
       var User = m.create({
         path: "/users/:userID",
-        model: {
-          incomplete: true,
-          fname: '',
-          lname: '',
-          id: ''
+        model: function(){
+          this.incomplete = true;
+          this.fname = '';
+          this.lname = '';
+          this.id = '';
         },
         controller: function(){
           m.ajax.get("/getUsers", {}, function(err, response){
             var i = 0;
             while(i < response.users.length){
               if(response.users[i].id == m.route.param("userID")){
-                User.model.fname(response.users[i].fname);
-                User.model.lname(response.users[i].lname);
-                User.model.id(response.users[i].id);
+                User.model.fname  = response.users[i].fname;
+                User.model.lname = response.users[i].lname;
+                User.model.id = response.users[i].id;
 
                 break;
               }
               i++;
             }
-            User.model.incomplete(false);
+            User.model.incomplete = false;
           });
 
         },
         view: function(ctrl){
           var stack = [];
-          if(User.model.incomplete()){
+          if(User.model.incomplete){
             stack.push(m.el('div','loading'));
           }else{
             stack.push(m('div', [
-              m.el('h3',User.model.fname() + " " + User.model.lname()),
+              m.el('h3',User.model.fname + " " + User.model.lname),
               components.link('users', 'Go Back')
             ]));
           }
@@ -201,19 +219,19 @@
       
       var Header = m.create({
         name: "Header",
-        model: {
-          text: ''
+        model: function(){
+          this.text = '';
         },
         controller: function(){
           var self = this;
           setTimeout(function(){
             m.startComputation()
-            Header.model.text(Math.floor((Math.random() * 10) + 1));
+            Header.model.text = Math.floor((Math.random() * 10) + 1);
             m.endComputation()
           },1500);
         },
         view: function(ctrl){
-          return m.el('h2', {onmouseenter: function(evt){console.log(evt.target)}},Header.model.text());
+          return m.el('h2', /*{onmouseenter: function(evt){console.log(evt.target)}}, */Header.model.text);
         }
       });
       
