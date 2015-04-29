@@ -194,6 +194,7 @@ m.off = captureOff
 #
 importModule = (module) ->
   buildImported = (mod, cacheKey) ->
+    mod.reset()
     imp = new mod.controller()
     imported[cacheKey] = imp
     imp
