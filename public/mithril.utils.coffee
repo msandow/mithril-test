@@ -26,12 +26,33 @@ selectorMatches = (el, selector) ->
 create = (configs = {}) ->
   o = {}
   
+  mergeArray = (dest, source) ->
+    dest.length = source.length
+    #dest.splice(source.length, dest.length)
+    
+    for item, idx in source
+      if typeof item is 'object' and !Array.isArray(item)
+        dest[idx] = {} if dest[idx] is undefined
+        mergeObject(dest[idx], item)
+      else if Array.isArray(item)
+        dest[idx] = [] if dest[idx] is undefined
+        mergeArray(dest[idx], item)
+      else
+        dest[idx] = item
+  
   mergeObject = (dest, source) ->
-    for own kk, vv of dest when source[kk]?
+    for own kk, vv of source
       if typeof vv is 'object' and !Array.isArray(vv)
         mergeObject(dest[kk], source[kk])
+      else if Array.isArray(vv)
+        mergeArray(dest[kk], source[kk])
       else
         dest[kk] = source[kk]
+
+    for own kk, vv of dest when source[kk] is undefined
+      delete desk[kk]
+  
+  resetTo = new (configs.model or (->))()
   
   Object.defineProperties(o,
     path:
@@ -70,8 +91,14 @@ create = (configs = {}) ->
       writable: false
       value: ()->
         m.startComputation()
-        mergeObject(o.model, new (configs.model or (->))())
+        mergeObject(o.model, resetTo)
         m.endComputation()
+    bookmark:
+      configurable: false
+      enumerable: false
+      writable: false
+      value: ()->
+        mergeObject(resetTo, o.model)
     serialize: 
       configurable: false
       enumerable: true
