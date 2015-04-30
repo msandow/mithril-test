@@ -46,7 +46,7 @@
           };
 
           this.logout = function(){
-            UserHeader.model.LoggedInUser.id = "";
+            UserHeader.reset();
           };
         },
         view: function(ctrl){
@@ -77,8 +77,8 @@
           return m.el('p',p);
         }
       });
-      
-      m.addModule(UserHeader);
+
+      m.register(UserHeader);
       
       var Index = m.create({
         path: "/",
@@ -118,7 +118,7 @@
         }
       });
       
-      m.addModule(Index);
+      m.register(Index);
 
       var Users = m.create({
         path: "/users",
@@ -172,7 +172,7 @@
         }
       });
 
-      m.addModule(Users);
+      m.register(Users);
 
 
       var User = m.create({
@@ -215,8 +215,8 @@
         }
       });
 
-      m.addModule(User);
-      
+      m.register(User);
+
       var Header = m.create({
         name: "Header",
         model: function(){
@@ -235,7 +235,7 @@
         }
       });
       
-      m.addModule(Header);
+      m.register(Header);
 
       m.buildRoutes(document.body);
 

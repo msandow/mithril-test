@@ -51,14 +51,14 @@
         }
       });
       
-      m.addModule(Navigation);
+      m.register(Navigation);
 
       var Empty = m.create({
         name: 'Empty',
         path: '/'
       });  
 
-      m.addModule(Empty);
+      m.register(Empty);
       
       var simple = function(name, route){
         var newModule = m.create({
@@ -91,7 +91,7 @@
           }
         });
 
-        return m.addModule(newModule);
+        return m.register(newModule);
       };
 
       simple('Home', ['/home','/homeagain']);

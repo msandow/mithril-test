@@ -24,14 +24,41 @@ selectorMatches = (el, selector) ->
 # @return {Object} a module object with path, name, model, controller and view properties extended from the configs
 #
 create = (configs = {}) ->
-  o = 
-    path: configs.path or null
-    name: configs.name or ""
-    view: configs.view or (-> null)
-    controller: configs.controller or (->)
-    unload: configs.unload or (->)
-
-  Object.defineProperties(o, 
+  o = {}
+  
+  mergeObject = (dest, source) ->
+    for own kk, vv of dest when source[kk]?
+      if typeof vv is 'object' and !Array.isArray(vv)
+        mergeObject(dest[kk], source[kk])
+      else
+        dest[kk] = source[kk]
+  
+  Object.defineProperties(o,
+    path:
+      configurable: false
+      enumerable: true
+      writable: false
+      value: configs.path or null
+    unload:
+      configurable: false
+      enumerable: false
+      writable: false
+      value: configs.unload or (->)
+    view:
+      configurable: false
+      enumerable: false
+      writable: false
+      value: configs.view or (-> null)
+    controller:
+      configurable: false
+      enumerable: false
+      writable: false
+      value: configs.controller or (->)
+    name:
+      configurable: false
+      enumerable: true
+      writable: false
+      value: configs.name or null
     model:
       configurable: false
       enumerable: false
@@ -42,7 +69,9 @@ create = (configs = {}) ->
       enumerable: false
       writable: false
       value: ()->
-        o.model = new (configs.model or (->))()
+        m.startComputation()
+        mergeObject(o.model, new (configs.model or (->))())
+        m.endComputation()
     serialize: 
       configurable: false
       enumerable: true
@@ -73,14 +102,14 @@ appModules = []
 # @param  {Object} module a module object with a signature matching that created by the {boiler boiler method}
 # @return {Object} a pointer back to the Mithril m object
 #
-addModule = (module = m.create()) ->
+register = (module = m.create()) ->
   appModules.push(module)
   module
 
 #
 # @nodoc
 #
-m.addModule = addModule
+m.register = register
 
 #
 # @nodoc
@@ -95,6 +124,11 @@ m.withAttachedEvents = []
 #
 # @nodoc
 #
+m.withCapturedEvents = []
+
+#
+# @nodoc
+#
 removeEl = (node) ->
   node.parentNode.removeChild(node) if node.parentNode
   return
@@ -105,22 +139,44 @@ removeEl = (node) ->
 defaultUnloader = (root) ->
   imported = {}
   detachAllEvents(root)
+  uncaptureAllEvents()
   return
 
 #
 # @nodoc
 #
 detachAllEvents = (root) ->
-  for el, idx in m.withAttachedEvents when el and (root.contains(el) or not document.body.contains(el))
-    for own ok, f of el.eventsMaps
-      el.removeEventListener(ok, f)
-    removeEl(el) unless document.body.contains(el)
-    m.withAttachedEvents[idx] = null
-
-  m.withAttachedEvents = m.withAttachedEvents.filter((e)->
-    e isnt null
-  )
+  idx = m.withAttachedEvents.length
+  el = null
   
+  while idx--
+    el = m.withAttachedEvents[idx]
+    
+    if el and (root.contains(el) or not document.body.contains(el))
+      for own ok, f of el.eventsMaps
+        el.removeEventListener(ok, f)
+
+    removeEl(el) unless document.body.contains(el)
+    m.withAttachedEvents.splice(idx, 1)
+  
+  return
+
+#
+# @nodoc
+#
+uncaptureAllEvents = () ->
+  idx = m.withCapturedEvents.length
+  el = null
+  
+  while idx--
+    el = m.withCapturedEvents[idx]
+
+    for own hash, func of el.captureEventsMaps
+      [full, evt, spaces, selector] = hash.match(/(\w+)([\s\t]+)(\w+)/i)
+      captureOff(el, selector, evt)
+    
+     m.withCapturedEvents.splice(idx, 1)
+
   return
 
 #
@@ -136,8 +192,7 @@ attachEventsToElement = (el, evts) ->
     el.eventsMaps[key] = evt
     el.addEventListener(key, el.eventsMaps[key])
     
-  if m.withAttachedEvents.indexOf(el) is -1
-    m.withAttachedEvents.push(el)
+  m.withAttachedEvents.push(el) if m.withAttachedEvents.indexOf(el) is -1
   
   return
 
@@ -149,18 +204,21 @@ attachEventsToElement = (el, evts) ->
 # @param {Function} event function to fire
 #
 captureOn = (el, evt, selector, func) ->
-  el.eventsMaps = el.eventsMaps or {}
-  hash = evt + ' : ' + selector
+  el.captureEventsMaps = el.captureEventsMaps or {}
+  hash = evt + ' ' + selector
   
-  if el.eventsMaps[hash] is undefined
+  if el.captureEventsMaps[hash] is undefined
+    console.log('capture',evt,selector)
     captureFunc = (evt) ->
       if selectorMatches(evt.target, selector)
         m.startComputation()
         func.apply(evt.target,[evt])
         m.endComputation()
 
-    el.eventsMaps[hash] = captureFunc
+    el.captureEventsMaps[hash] = captureFunc
     el.addEventListener(evt, captureFunc, true)
+    
+    m.withCapturedEvents.push(el) if m.withCapturedEvents.indexOf(el) is -1
   return
   
 #
@@ -175,10 +233,10 @@ m.on = captureOn
 # @param {String} event string name of the event to listen for
 #
 captureOff = (el, selector, evt) ->
-  hash = evt + ' : ' + selector
-  if el.eventsMaps and el.eventsMaps[hash]
-    el.removeEventListener(evt, el.eventsMaps[hash], true)
-    delete el.eventsMaps[hash]
+  hash = evt + ' ' + selector
+  if el.captureEventsMaps and el.captureEventsMaps[hash]
+    el.removeEventListener(evt, el.captureEventsMaps[hash], true)
+    delete el.captureEventsMaps[hash]
   return
 
 
@@ -194,7 +252,7 @@ m.off = captureOff
 #
 importModule = (module) ->
   buildImported = (mod, cacheKey) ->
-    mod.reset()
+    #mod.reset()
     imp = new mod.controller()
     imported[cacheKey] = imp
     imp
@@ -214,7 +272,7 @@ importModule = (module) ->
 m.importModule = importModule
 
 
-# Return a reference to a module registered with addModule
+# Return a reference to a module registered with register
 #
 # @param  {String} module the name module to get
 # @return {Object} the module, if found, or null if not
@@ -294,7 +352,7 @@ m.el = el
 #
 buildController = (route, DOMRoot) ->
   ->
-    route.reset()
+    #route.reset()
     route.controller.call(@)
     
     for own hash, func of route.events
@@ -310,7 +368,7 @@ buildController = (route, DOMRoot) ->
     Object.preventExtensions(@)
 
 
-# Take all modules added with addModule(), and initialize all the routes so the app can be used
+# Take all modules added with register(), and initialize all the routes so the app can be used
 #
 # @param  {Object} DOMRoot the HTML DOM element to render all routed modules inside of
 #
@@ -353,7 +411,7 @@ buildRoutes = (DOMRoot) ->
 m.buildRoutes = buildRoutes
 
 
-# Take all modules added with addModule(), and initialize all the routes so the app can be used
+# Take all modules added with register(), and initialize all the routes so the app can be used
 #
 # @param  {Object} DOMRoot the HTML DOM element to render the module inside of
 # @param  {String} module the name property of the registered module to import
