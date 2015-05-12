@@ -50,7 +50,7 @@ create = (configs = {}) ->
         dest[kk] = source[kk]
 
     for own kk, vv of dest when source[kk] is undefined
-      delete desk[kk]
+      delete dest[kk]
   
   resetTo = new (configs.model or (->))()
   
@@ -235,13 +235,15 @@ captureOn = (el, evt, selector, func) ->
   hash = evt + ' ' + selector
   
   if el.captureEventsMaps[hash] is undefined
-    console.log('capture',evt,selector)
     captureFunc = (evt) ->
       if selectorMatches(evt.target, selector)
         m.startComputation()
         func.apply(evt.target,[evt])
         m.endComputation()
-
+    
+    if el.captureEventsMaps[hash]?
+      el.removeEventListener(evt, el.captureEventsMaps[hash], true)
+    
     el.captureEventsMaps[hash] = captureFunc
     el.addEventListener(evt, captureFunc, true)
     

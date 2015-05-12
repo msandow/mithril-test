@@ -1,0 +1,130 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Mithril Test</title>
+  <!--
+  <link rel="stylesheet" href="css/styles.css?v=1.0">
+  -->
+  <script src="mithril.min.js"></script>
+  <script src="mithril.app.js"></script>
+  <script>
+    m.ready(function(){
+      var ElementsFactory = {
+        internalLink: function(link, text, config){
+          config = config || {};
+          config.config = m.route;
+          config.onclick = function(){
+            console.log(LoadingScreen);
+          };
+          config.href = link;
+          
+          return m('a', config, text);
+        }
+      };
+    
+      var App = {
+        view: function(){},
+        controller: function(){
+          m.route("/home");
+        },
+        route: "/"
+      };
+      
+      m.register(App);
+      
+      var Navigation = {
+        controller: function(args){ 
+          this.links = [
+            {
+              text: 'Home',
+              url: '/home'
+            },
+            {
+              text: 'Account',
+              url: '/account'
+            }
+          ];
+        },
+        view: function(ctx, args){
+          return m('nav',ctx.links.map(function(l){
+            var configs = l.url == args.url ? {style: {'font-weight': 'bold'}} : null;
+            return ElementsFactory.internalLink(l.url, l.text, configs);
+          }));
+        }
+      };
+      
+      var LoadingScreen = m.component({
+        controller: function(){
+          this.active = true;
+        },
+        view: function(ctx){
+          if(ctx.active){
+            return m.el('p','Loading...');
+          }
+          
+          return null;
+        }
+      });
+      
+      var Home = {
+        controller: function(){
+          var self = this;
+          this.navigationPanel = m.component(Navigation, {url: m.route()});
+          this.counter = 0;
+          this.isLoading = true;
+          
+          m.ajax({
+            type:'GET',
+            url: '/getNumber',
+            complete: function(error, response){
+              self.counter = response.number;
+              self.isLoading = false;
+            }
+          });
+          
+          this.message = "Welcome back";
+        },
+        view: function(ctx){
+          return m('section',[
+            ctx.navigationPanel(),
+            m.el('span',{
+              onclick: function(){
+                ctx.counter++;
+              }
+            }, ctx.message + ' ' + ctx.counter),
+            (ctx.isLoading ? LoadingScreen() : null)
+          ]);
+        },
+        route: "/home"
+      };
+      
+      m.register(Home);
+      
+      var Account = {
+        controller: function(){
+          this.navigationPanel = m.component(Navigation, {url: m.route()});
+          
+        },
+        view: function(ctx){
+          return m('section',[
+            ctx.navigationPanel(),
+            m.el('h2','Account')
+          ]);
+        },
+        route: "/account"
+      };
+      
+      m.register(Account);
+      
+      m.start(m.query('body'));
+    });
+  </script>
+</head>
+
+<body>
+  
+</body>
+</html>

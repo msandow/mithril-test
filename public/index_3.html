@@ -17,7 +17,13 @@
         user: function(name){
           return {
             name: name,
-            counter: 0
+            counter: 0,
+            increment: function(){
+              this.counter++;
+            },
+            setName: function(evt){
+              this.name = evt.target.value
+            }
           };
         }
       };
@@ -28,6 +34,14 @@
         model: function(){
           this.users = [];
         },
+        events: {
+          "mouseenter p": function(){
+            this.style.textDecoration = "underline";
+          },
+          "mouseleave p": function(){
+            this.style.textDecoration = "none";
+          }
+        },
         controller: function(){
           Index.model.users.push(
             components.user('Bob'),
@@ -35,19 +49,22 @@
             components.user('Betty'),
             components.user('Zane')
           );
-          
-          this.increment = function(user){
-            user.counter++;
-          };
         },
         view: function(ctrl){
           var children = Index.model.users.map(function(user){
             return m.el("p", [
-              user.name + ' - ' + user.counter + ' ',
+              m.el('input',{
+                type: 'text',
+                value: user.name,
+                onkeyup: function(evt){
+                  user.setName(evt)
+                }
+              }),
+              ' - ' + user.counter + ' ',
               m.el('a',{
                 onclick: function(evt){
                   evt.preventDefault();
-                  ctrl.increment(user);
+                  user.increment();
                 },
                 href: '#'
               }, 'Add')
