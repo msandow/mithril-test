@@ -5,26 +5,23 @@
   <meta charset="utf-8">
 
   <title>Mithril Test</title>
-  <!--
-  <link rel="stylesheet" href="css/styles.css?v=1.0">
-  -->
-  <script src="mithril.min.js"></script>
-  <script src="mithril.app.js"></script>
+
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    window.token = "#{csrf}";
+  </script>
+  <script src="js/app.js"></script>
   <script>
     m.ready(function(){
-      var ElementsFactory = {
-        internalLink: function(link, text, config){
-          config = config || {};
-          config.config = m.route;
-          config.onclick = function(){
-            console.log(LoadingScreen);
-          };
-          config.href = link;
-          
-          return m('a', config, text);
+      var Utils = {
+        constructAppLink: function(str){
+          return '#' + str;
+        },
+        destructAppLink: function(str){
+          return str.substring(1);
         }
       };
-    
+      
       var App = {
         view: function(){},
         controller: function(){
@@ -49,9 +46,22 @@
           ];
         },
         view: function(ctx, args){
-          return m('nav',ctx.links.map(function(l){
-            var configs = l.url == args.url ? {style: {'font-weight': 'bold'}} : null;
-            return ElementsFactory.internalLink(l.url, l.text, configs);
+          return m.el('nav',{
+            onclick: function(evt){
+              evt.preventDefault();
+              m.route(Utils.destructAppLink(evt.target.getAttribute('href')));
+              return false;
+            }
+          },ctx.links.map(function(l){
+            var configs = {
+              href: Utils.constructAppLink(l.url),
+            };
+            if(l.url == args.url){
+              configs.style = {};
+              configs.style["font-weight"] = 'bold';
+            }
+
+            return m('a',configs,l.text);
           }));
         }
       };
@@ -76,7 +86,7 @@
           this.counter = 0;
           this.isLoading = true;
           
-          m.ajax({
+          var request = m.ajax({
             type:'GET',
             url: '/getNumber',
             complete: function(error, response){

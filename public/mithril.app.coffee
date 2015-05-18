@@ -182,4 +182,6 @@ bindElEvents = (el, events) ->
 unbindElEvents = (el, events) ->
   for own key, evt of events
     el.removeEventListener(key, evt)
-    #delete events[key]
+    delete events[key]
+
+console.warn(123)
