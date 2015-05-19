@@ -102,6 +102,13 @@ app.get('/getNumber', function(req, res){
 });
 
 //app.use('/doc', express.static(__dirname + '/doc'));
-//app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/public',{
+  setHeaders: function(res, file, stats){
+    if(/\.map$/i.test(file) && !res.headersSent){
+      res.set('Content-Type', 'application/json');
+    }
+  }
+}));
+
 
 app.listen(8000);
