@@ -127,30 +127,47 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (conf) ->
-        conf = formatAjaxRequest(conf)
-    
-        requestOptions = 
-          method: conf.type
-          url: conf.url
-          background: true
-          data: conf.data
-          extract: (xhr, xhrOptions) ->
-            if xhrOptions.method is 'HEAD' then xhr.getAllResponseHeaders() else xhr.responseText
+      conf = formatAjaxRequest(conf)
+      transport = null
 
-        m.request(requestOptions)
-          .then(
-            (response) ->
-              m.startComputation()
-              conf.complete(null, response)
-              m.endComputation()
-            ,
-            (response) ->
-              m.startComputation()
-              conf.complete(response, null)
-              m.endComputation()
-          )
-      
-      format: (ob) ->
+      requestOptions = 
+        method: conf.type
+        url: conf.url
+        background: true
+        data: conf.data
+        extract: (xhr, xhrOptions) ->
+          if xhr.status is 0
+            return if xhr.statusText.length then xhr.statusText else JSON.stringify(
+              message: 'aborted'
+            )
+
+          if xhrOptions.method is 'HEAD' then xhr.getAllResponseHeaders() else xhr.responseText
+        config: (xhr)->
+          transport = xhr
+
+          if conf.headers
+            for own kk, vv of conf.headers
+              xhr.setRequestHeader(kk, vv)
+          xhr
+
+      requestOptions.type = conf.cast if conf.cast
+
+      m.request(requestOptions)
+        .then(
+          (response) ->
+            m.startComputation()
+            conf.complete(null, response)
+            m.endComputation()
+          ,
+          (response) ->
+            console.log(response)
+            m.startComputation()
+            conf.complete(response, null)
+            m.endComputation()
+        )
+    
+      transport
+
 
 )
 
@@ -160,6 +177,7 @@ formatAjaxRequest = (ob) ->
     url: if ob.url then ob.url else '/'
     complete: if ob.complete then ob.complete else (->)
     data: {}
+    headers: if ob.headers then ob.headers else {}
   }
   
   if ['POST','PUT'].indexOf(ret.type) > -1 and typeof ob.data is 'object'
@@ -173,6 +191,8 @@ formatAjaxRequest = (ob) ->
     ret.url += if requestOptions.url.indexOf("?") > -1 then "&" else "?"
     ret.url += qs.join("&")
   
+  ret.cast = ob.cast if ob.cast
+
   ret
 
 bindElEvents = (el, events) ->

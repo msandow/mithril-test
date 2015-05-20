@@ -92,11 +92,17 @@
             type:'GET',
             url: '/getNumber',
             complete: function(error, response){
-              self.counter = response.number;
               self.isLoading = false;
+              
+              if(!error){
+                self.counter = response.number; 
+              }
+            },
+            headers: {
+              foo: 'bar'
             }
           });
-          
+          request.abort();
           this.message = "Welcome back";
         },
         view: function(ctx){
