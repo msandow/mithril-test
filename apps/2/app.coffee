@@ -1,5 +1,5 @@
-module.exports = do ->
+module.exports = ->
   
   window.console.log('foo bar')
 
-  throw new Error('message 2')
+  #throw new Error('message 2')
