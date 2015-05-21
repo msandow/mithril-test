@@ -6,11 +6,11 @@ module.exports = () ->
 
   Router.use((req, res, next)->
     console.log('Auth request', req.originalUrl)
-  
-    if req.session.user and req.session.CSRF and false
+    
+    if req.session.userId and req.session.CSRF and req.headers.csrf and (req.session.CSRF is req.headers.csrf)
       next()
     else
-      res.status(401).send(null)
+      res.status(401).json({message: 'Not logged in'}).end()
   )
   
   Router

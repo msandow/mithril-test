@@ -7,8 +7,13 @@ Object.defineProperties(m,
     enumerable: true
     configurable: false
     writable: false
-    value: (selector) ->
-      document.querySelector.apply(document, [selector])
+    value: (selectorOrElement, selector) ->
+      if selector is undefined
+        q = document.querySelectorAll.apply(document, [selectorOrElement])
+        return if q.length is 1 then q[0] else q
+      else
+        q = selectorOrElement.querySelectorAll.apply(selectorOrElement, [selector])
+        return if q.length is 1 then q[0] else q
   
   'matches':
     enumerable: true
@@ -74,8 +79,11 @@ Object.defineProperties(m,
           else
             routeHash[currMod.route] = currMod
       
-      m.route(DOMRoot, '/', routeHash) if Object.keys(routeHash).length
+      if routeHash['/'] is undefined
+        return console.warn("No root \"/\" route defined")
       
+      m.route(DOMRoot, '/', routeHash) if Object.keys(routeHash).length
+
   
   'component':
     enumerable: false
@@ -83,6 +91,14 @@ Object.defineProperties(m,
     writable: false
     value: (module, args, extra) ->
       module.view.bind(this, new module.controller(args, extra), args, extra)
+
+
+  'refresh':
+    enumerable: false
+    configurable: false
+    writable: false
+    value: (module, args, extra) ->
+      m.route(m.route())
 
 
   'el':
@@ -203,5 +219,3 @@ unbindElEvents = (el, events) ->
   for own key, evt of events
     el.removeEventListener(key, evt)
     delete events[key]
-
-console.warn(123)

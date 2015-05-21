@@ -1,9 +1,10 @@
 express = require('express')
 Boxy = require('BoxyBrown')
 
-Router = new express.Router()
+OpenRouter = require('./open_route.coffee')()
+SecureRouter = require('./authenticated_route.coffee')()
 
-Router.get('/getUsers', (req, res) ->
+OpenRouter.get('/getUsers', (req, res) ->
   setTimeout (->
     res.json(require(__dirname + '/../users.json'))
     return
@@ -11,11 +12,11 @@ Router.get('/getUsers', (req, res) ->
   return
 )
 
-Router.post('/getter', (req, res) ->
+OpenRouter.post('/getter', (req, res) ->
   return res.send string: req.body.id
 )
 
-Router.get('/getNumber', (req, res) ->
+SecureRouter.get('/getNumber', (req, res) ->
   #  if(req.session.user == undefined){
   #    req.session.user = '1234'
   #    console.log('No user', 'setting to', '1234')
@@ -32,7 +33,7 @@ Router.get('/getNumber', (req, res) ->
 
 #app.use('/doc', express.static(__dirname + '/doc'));
 
-Router.use(
+OpenRouter.use(
   express.static(__dirname + '/../public', setHeaders: (res, file, stats) ->
     if /\.map$/i.test(file) and !res.headersSent
       res.set('Content-Type', 'application/json')
@@ -40,4 +41,6 @@ Router.use(
   )
 )
 
-module.exports = Router
+module.exports = 
+  scope: '/'
+  router: [OpenRouter, SecureRouter]
