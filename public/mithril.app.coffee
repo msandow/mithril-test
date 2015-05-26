@@ -176,7 +176,6 @@ Object.defineProperties(m,
             m.endComputation()
           ,
           (response) ->
-            console.log(response)
             m.startComputation()
             conf.complete(response, null)
             m.endComputation()

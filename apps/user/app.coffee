@@ -75,7 +75,7 @@ module.exports = ->
                   un: un
                   pw: pw
                 complete: (error, response) =>
-                  if error
+                  if error or not response.userId
                     alert('Please try again')
                     return
                   
@@ -103,7 +103,9 @@ module.exports = ->
     Dashboard = 
       controller: class extends ShouldBeLoggedIn
         constructor: ->
-          @checkLoggedIn()
+          @checkLoggedIn(=>
+            console.info('in')
+          )
       view: (ctx) ->
         [
           m.el('h1',"Hello user " + window.sessionStorage.getItem('currentUser')),
