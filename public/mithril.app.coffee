@@ -2,6 +2,41 @@
 window.m = window.m or {}
 m = window.m
 
+
+formatAjaxRequest = (ob) ->
+  ob.method = ob.method.toUpperCase()
+  ob.complete = (->) if typeof ob.complete isnt 'function'
+  ob.background = true
+  
+  if ['HEAD','DELETE','GET'].indexOf(ob.method) > -1 and typeof ob.data is 'object' and Object.keys(ob.data).length
+    qs = []
+    for own key, val of ob.data
+      qs.push(encodeURIComponent(key) + "=" + encodeURIComponent(val))
+
+    ob.url += if ob.url.indexOf("?") > -1 then "&" else "?"
+    ob.url += qs.join("&")
+    ob.data = {}
+
+  ob
+
+
+bindElEvents = (el, events) ->
+  for own key, evt of events
+    el.addEventListener(key, evt)
+
+unbindElEvents = (el, events) ->
+  for own key, evt of events
+    el.removeEventListener(key, evt)
+    delete events[key]
+
+headersToJson = (str) ->
+  ob = {}
+  
+  for line in str.split("\n")
+    ob[line.substring(0, line.indexOf(":")).trim()] = line.substring(line.indexOf(":")+1).trim()
+  
+  JSON.stringify(ob)
+
 Object.defineProperties(m,
   'query':
     enumerable: true
@@ -36,7 +71,7 @@ Object.defineProperties(m,
     value: []
   
   'ready':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (cb) ->
@@ -51,7 +86,7 @@ Object.defineProperties(m,
         m.readyQueue.push(cb)
         
   'register':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (module) ->
@@ -62,7 +97,7 @@ Object.defineProperties(m,
       m.toRegister.push(module) if m.toRegister.indexOf(module) is -1
       
   'start':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (DOMRoot) ->
@@ -86,7 +121,7 @@ Object.defineProperties(m,
 
   
   'component':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (module, args, extra) ->
@@ -94,7 +129,7 @@ Object.defineProperties(m,
 
 
   'refresh':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (module, args, extra) ->
@@ -102,7 +137,7 @@ Object.defineProperties(m,
 
 
   'el':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (str, hashOrChildren, children) ->
@@ -139,34 +174,34 @@ Object.defineProperties(m,
       
 
   'ajax':
-    enumerable: false
+    enumerable: true
     configurable: false
     writable: false
     value: (conf) ->
-      conf = formatAjaxRequest(conf)
+      requestOptions = formatAjaxRequest(conf)
       transport = null
+      
+      requestOptions.extract = (xhr, xhrOptions) ->
+        if xhr.status is 0
+          return if xhr.statusText.length then xhr.statusText else JSON.stringify(
+            message: 'aborted'
+          )
 
-      requestOptions = 
-        method: conf.type
-        url: conf.url
-        background: true
-        data: conf.data
-        extract: (xhr, xhrOptions) ->
-          if xhr.status is 0
-            return if xhr.statusText.length then xhr.statusText else JSON.stringify(
-              message: 'aborted'
-            )
+        if xhr.status is 404
+          return JSON.stringify(
+            message: xhr.responseText or xhr.statusText
+          )
 
-          if xhrOptions.method is 'HEAD' then xhr.getAllResponseHeaders() else xhr.responseText
-        config: (xhr)->
-          transport = xhr
+        if xhrOptions.method is 'HEAD' then headersToJson(xhr.getAllResponseHeaders()) else xhr.responseText
+        
+      requestOptions.config = (xhr)->
+        transport = xhr
 
-          if conf.headers
-            for own kk, vv of conf.headers
-              xhr.setRequestHeader(kk, vv)
-          xhr
-
-      requestOptions.type = conf.cast if conf.cast
+        if conf.headers
+          for own kk, vv of conf.headers
+            xhr.setRequestHeader(kk, vv)
+        xhr
+      
 
       m.request(requestOptions)
         .then(
@@ -184,37 +219,16 @@ Object.defineProperties(m,
       transport
 
 
+  'extend':
+    enumerable: true
+    configurable: false
+    writable: false
+    value: (extend = {}, using = {}) ->
+      for own kk, vv of using
+        if typeof vv is 'object' and not Array.isArray(vv) and typeof extend[kk] is 'object' and not Array.isArray(extend[kk])
+          extend[kk] = m.extend(extend[kk], vv)
+        else
+          extend[kk] = vv
+      
+      extend
 )
-
-formatAjaxRequest = (ob) ->
-  ret = {
-    type: if ob.type then ob.type.toUpperCase() else 'GET'
-    url: if ob.url then ob.url else '/'
-    complete: if ob.complete then ob.complete else (->)
-    data: {}
-    headers: if ob.headers then ob.headers else {}
-  }
-  
-  if ['POST','PUT'].indexOf(ret.type) > -1 and typeof ob.data is 'object'
-    ret.data = ob.data
-
-  if ['GET','DELETE','HEAD'].indexOf(ret.type) > -1 and typeof ob.data is 'object'
-    qs = []
-    for own key, val of data
-      qs.push(encodeURIComponent("#{key}=#{val}"))
-
-    ret.url += if requestOptions.url.indexOf("?") > -1 then "&" else "?"
-    ret.url += qs.join("&")
-  
-  ret.cast = ob.cast if ob.cast
-
-  ret
-
-bindElEvents = (el, events) ->
-  for own key, evt of events
-    el.addEventListener(key, evt)
-
-unbindElEvents = (el, events) ->
-  for own key, evt of events
-    el.removeEventListener(key, evt)
-    delete events[key]

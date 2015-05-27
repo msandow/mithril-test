@@ -3,8 +3,8 @@ module.exports = ->
     
     class ShouldBeLoggedIn
       checkLoggedIn: (cb = (->)) ->
-        m.ajax(
-          type: 'GET'
+        userAjax(
+          method: 'GET'
           url: '/user/ping'
           complete: (error, response) =>
             if error or !response.ping or !window.sessionStorage.getItem('currentUser')
@@ -13,6 +13,12 @@ module.exports = ->
             
             cb()
         )
+    
+    
+    userAjax = (configs)->
+      configs.headers  = {} if configs.headers is undefined
+      configs.headers.csrf = window.sessionStorage.getItem('csrf') or ''
+      m.ajax(configs)
     
     
     LogOutButton = m.component(
@@ -24,11 +30,9 @@ module.exports = ->
           onclick: (evt)->
             evt.preventDefault()
             
-            m.ajax(
-              type: 'POST'
+            userAjax(
+              method: 'POST'
               url: '/user/logout'
-              headers:
-                csrf: window.sessionStorage.getItem('csrf')
               complete: (error, response) =>
                 window.sessionStorage.removeItem('currentUser')
                 window.sessionStorage.removeItem('csrf')
@@ -68,8 +72,8 @@ module.exports = ->
             if not un or not pw
               alert('Please fill out the form')
             else
-              m.ajax(
-                type: 'POST'
+              userAjax(
+                method: 'POST'
                 url: '/user/login'
                 data:
                   un: un
