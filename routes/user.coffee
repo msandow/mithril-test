@@ -28,9 +28,11 @@ SecureRouter.post('/logout', (req, res)->
 
 
 OpenRouter.get('/ping', (req, res)->
-  res.json({
-    ping: !!(req.session.userId && req.session.CSRF)
-  })
+  setTimeout(->
+    res.json({
+      ping: !!(req.session.userId && req.session.CSRF)
+    })
+  , 500)
 )
 
 

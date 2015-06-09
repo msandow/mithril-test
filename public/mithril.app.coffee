@@ -3,6 +3,7 @@ window.m = window.m or {}
 m = window.m
 
 
+
 formatAjaxRequest = (ob) ->
   ob.method = ob.method.toUpperCase()
   ob.complete = (->) if typeof ob.complete isnt 'function'
@@ -20,14 +21,19 @@ formatAjaxRequest = (ob) ->
   ob
 
 
+
 bindElEvents = (el, events) ->
   for own key, evt of events
     el.addEventListener(key, evt)
+
+
 
 unbindElEvents = (el, events) ->
   for own key, evt of events
     el.removeEventListener(key, evt)
     delete events[key]
+
+
 
 headersToJson = (str) ->
   ob = {}
@@ -36,6 +42,8 @@ headersToJson = (str) ->
     ob[line.substring(0, line.indexOf(":")).trim()] = line.substring(line.indexOf(":")+1).trim()
   
   JSON.stringify(ob)
+
+
 
 Object.defineProperties(m,
   'query':
@@ -49,7 +57,9 @@ Object.defineProperties(m,
       else
         q = selectorOrElement.querySelectorAll.apply(selectorOrElement, [selector])
         return if q.length is 1 then q[0] else q
-  
+
+
+
   'matches':
     enumerable: true
     configurable: false
@@ -57,19 +67,25 @@ Object.defineProperties(m,
     value: (el, selector) ->
       method = el.matches or el.msMatchesSelector or el.mozMatchesSelector or el.webkitMatchesSelector or el.oMatchesSelector or false
       if method then method.apply(el, [selector]) else false
-  
+
+
+
   'toRegister':
     enumerable: false
     configurable: false
     writable: false
     value: []
 
+
+
   'readyQueue':
     enumerable: false
     configurable: false
     writable: false
     value: []
-  
+
+
+
   'ready':
     enumerable: true
     configurable: false
@@ -84,7 +100,9 @@ Object.defineProperties(m,
               (m.readyQueue.shift())()
 
         m.readyQueue.push(cb)
-        
+
+
+
   'register':
     enumerable: true
     configurable: false
@@ -95,7 +113,9 @@ Object.defineProperties(m,
       module.route = null if module.route is undefined or !module.route.length
       
       m.toRegister.push(module) if m.toRegister.indexOf(module) is -1
-      
+
+
+
   'start':
     enumerable: true
     configurable: false
@@ -119,7 +139,8 @@ Object.defineProperties(m,
       
       m.route(DOMRoot, '/', routeHash) if Object.keys(routeHash).length
 
-  
+
+
   'component':
     enumerable: true
     configurable: false
@@ -128,12 +149,14 @@ Object.defineProperties(m,
       module.view.bind(this, new module.controller(args, extra), args, extra)
 
 
+
   'refresh':
     enumerable: true
     configurable: false
     writable: false
     value: (module, args, extra) ->
       m.route(m.route())
+
 
 
   'el':
@@ -172,6 +195,7 @@ Object.defineProperties(m,
 
       m(str, hashOrChildren, children)
       
+
 
   'ajax':
     enumerable: true
@@ -219,6 +243,7 @@ Object.defineProperties(m,
       transport
 
 
+
   'extend':
     enumerable: true
     configurable: false
@@ -231,4 +256,35 @@ Object.defineProperties(m,
           extend[kk] = vv
       
       extend
+
+
+  'multi':
+    enumerable: true
+    configurable: false
+    writable: false
+    value: (classes...)->
+      classes.reduceRight (Parent, Child)->
+        class Child_Projection extends Parent
+          constructor: ->
+            # Temporary replace Child.__super__ and call original `constructor`
+            child_super = Child.__super__
+            Child.__super__ = Child_Projection.__super__
+            Child.apply @, arguments
+            Child.__super__ = child_super
+
+            # If Child.__super__ not exists, manually call parent `constructor`
+            unless child_super?
+              super
+
+        # Mixin prototype properties, except `constructor`
+        for own key  of Child::
+          if Child::[key] isnt Child
+            Child_Projection::[key] = Child::[key]
+
+        # Mixin static properties, except `__super__`
+        for own key  of Child
+          if Child[key] isnt Object.getPrototypeOf(Child::)
+            Child_Projection[key] = Child[key]
+
+        Child_Projection
 )

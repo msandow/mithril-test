@@ -1,4 +1,12 @@
 body,html{
   background-color:#ccc;
   min-height:100%;
+  
+  input, button{
+    margin:0px 10px 10px 0px;
+    
+    &:last-child{
+      margin-bottom:0px;
+    }
+  }
 }

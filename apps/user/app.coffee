@@ -2,6 +2,7 @@ module.exports = ->
   m.ready(->
     
     class ShouldBeLoggedIn
+      
       checkLoggedIn: (cb = (->)) ->
         userAjax(
           method: 'GET'
@@ -14,6 +15,10 @@ module.exports = ->
             cb()
         )
     
+    class DeferredView
+      
+      viewReady: false
+    
     
     userAjax = (configs)->
       configs.headers  = {} if configs.headers is undefined
@@ -22,12 +27,9 @@ module.exports = ->
     
     
     LogOutButton = m.component(
-      controller: ->
-  
-      view: (ctx) ->
-        m.el('a',{
-          href: '#'
-          onclick: (evt)->
+      controller: class
+        constructor: ->
+          @logOut = (evt)->
             evt.preventDefault()
             
             userAjax(
@@ -36,9 +38,15 @@ module.exports = ->
               complete: (error, response) =>
                 window.sessionStorage.removeItem('currentUser')
                 window.sessionStorage.removeItem('csrf')
-                m.refresh()
+                m.route('/login')
             )
             false
+            
+  
+      view: (ctx) ->
+        m.el('a',{
+          href: '#'
+          onclick: ctx.logOut
         },'Log Out')
     )
     
@@ -59,11 +67,7 @@ module.exports = ->
     Login = 
       controller: class
         constructor: ->
-          
-          
-      view: (ctx) ->
-        m.el('form',{
-          onsubmit: (evt)->
+          @loginSubmit = (evt)->
             evt.preventDefault()
             
             un = m.query(evt.target, 'input[type="text"]').value
@@ -90,6 +94,10 @@ module.exports = ->
               )
             
             false
+          
+      view: (ctx) ->
+        m.el('form',{
+          onsubmit: ctx.loginSubmit
         },[
           m.el('input',{type: 'text', placeholder: 'Username'}),
           m('br'),
@@ -105,12 +113,14 @@ module.exports = ->
     
     
     Dashboard = 
-      controller: class extends ShouldBeLoggedIn
+      controller: class extends m.multi(ShouldBeLoggedIn, DeferredView)
         constructor: ->
           @checkLoggedIn(=>
+            @viewReady = true
             console.info('in')
           )
       view: (ctx) ->
+        return null if not ctx.viewReady
         [
           m.el('h1',"Hello user " + window.sessionStorage.getItem('currentUser')),
           LogOutButton()
