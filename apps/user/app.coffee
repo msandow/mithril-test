@@ -3,6 +3,8 @@ module.exports = ->
     
     class ShouldBeLoggedIn
       
+      foo: 1
+      
       checkLoggedIn: (cb = (->)) ->
         userAjax(
           method: 'GET'
@@ -16,6 +18,8 @@ module.exports = ->
         )
     
     class DeferredView
+      
+      foo: 2
       
       viewReady: false
     
@@ -113,8 +117,9 @@ module.exports = ->
     
     
     Dashboard = 
-      controller: class extends m.multi(ShouldBeLoggedIn, DeferredView)
+      controller: class extends m.multiClass(ShouldBeLoggedIn, DeferredView)
         constructor: ->
+          console.info(@foo)
           @checkLoggedIn(=>
             @viewReady = true
             console.info('in')

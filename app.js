@@ -10,10 +10,14 @@ app.use(session({
   genid: function(req) {
     return uuid.v4();
   },
+  cookie: {
+    maxAge: 2419200000
+  },
   secret: '1234567890QWERTY',
   saveUninitialized: true,
   resave: true
 }));
+
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
