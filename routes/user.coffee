@@ -33,19 +33,27 @@ SecureRouter.post('/logout', (req, res)->
   res.json({})
 )
 
-
-
-OpenRouter.get('/ping', (req, res)->
-  console.log((req.session.expires - getUTCTime()))
-  if req.session?.expires && (req.session.expires - getUTCTime()) < 1
-    req.session.destroy()
-  
+SecureRouter.get('/fetch', (req, res)->
   setTimeout(->
     res.json({
-      ping: !!(req.session?.userId && req.session?.CSRF && req.session?.expires && (req.session?.expires - getUTCTime()) > 0)
+      userId: req.session.userId
+      name: 'Foobar'
     })
   , 500)
 )
+
+
+#OpenRouter.get('/ping', (req, res)->
+#  console.log((req.session.expires - getUTCTime()))
+#  if req.session?.expires && (req.session.expires - getUTCTime()) < 1
+#    req.session.destroy()
+#  
+#  setTimeout(->
+#    res.json({
+#      ping: !!(req.session?.userId && req.session?.CSRF && req.session?.expires && (req.session?.expires - getUTCTime()) > 0)
+#    })
+#  , 500)
+#)
 
 
 module.exports = 

@@ -1,42 +1,22 @@
+secureAjax = require('./../temp/secureAjax.coffee')
+
 module.exports = ->
   m.ready(->
-    
-    class ShouldBeLoggedIn
-      
-      foo: 1
-      
-      checkLoggedIn: (cb = (->)) ->
-        userAjax(
-          method: 'GET'
-          url: '/user/ping'
-          complete: (error, response) =>
-            if error or !response.ping or !window.sessionStorage.getItem('currentUser')
-              m.route('/login')
-              return
-            
-            cb()
-        )
-    
+
     class DeferredView
       
       foo: 2
       
       viewReady: false
-    
-    
-    userAjax = (configs)->
-      configs.headers  = {} if configs.headers is undefined
-      configs.headers.csrf = window.sessionStorage.getItem('csrf') or ''
-      m.ajax(configs)
-    
-    
+
+
     LogOutButton = m.component(
       controller: class
         constructor: ->
-          @logOut = (evt)->
+          @logOut = (evt)=>
             evt.preventDefault()
             
-            userAjax(
+            secureAjax(
               method: 'POST'
               url: '/user/logout'
               complete: (error, response) =>
@@ -80,7 +60,7 @@ module.exports = ->
             if not un or not pw
               alert('Please fill out the form')
             else
-              userAjax(
+              m.ajax(
                 method: 'POST'
                 url: '/user/login'
                 data:
@@ -111,23 +91,28 @@ module.exports = ->
         ])
         
 
-      route: '/login'
+      route: ['/login', '/login/:message']
     
     m.register(Login)
     
     
     Dashboard = 
-      controller: class extends m.multiClass(ShouldBeLoggedIn, DeferredView)
+      controller: class extends DeferredView
         constructor: ->
-          console.info(@foo)
-          @checkLoggedIn(=>
-            @viewReady = true
-            console.info('in')
+          @name = ''
+          
+          secureAjax(
+            method: 'GET'
+            url: '/user/fetch'
+            complete: (error, response)=>
+              @name = response.name
+              @viewReady = true
           )
+
       view: (ctx) ->
         return null if not ctx.viewReady
         [
-          m.el('h1',"Hello user " + window.sessionStorage.getItem('currentUser')),
+          m.el('h1',"Hello user " + ctx.name),
           LogOutButton()
         ]
         

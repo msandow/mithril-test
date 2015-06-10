@@ -231,12 +231,12 @@ Object.defineProperties(m,
         .then(
           (response) ->
             m.startComputation()
-            conf.complete(null, response)
+            conf.complete(null, response, transport)
             m.endComputation()
           ,
           (response) ->
             m.startComputation()
-            conf.complete(response, null)
+            conf.complete(response, null, transport)
             m.endComputation()
         )
     
