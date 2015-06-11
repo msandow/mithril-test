@@ -2,13 +2,13 @@ express = require('express')
 Boxy = require('BoxyBrown')
 uuid = require('uuid')
 
-OpenRouter = require('./open_route.coffee')()
-SecureRouter = require('./authenticated_route.coffee')()
+serverShared = "#{__dirname}/../../modules_server/_utilities"
 
-getUTCTime = ()->
-  now = new Date()
-  now_utc = new Date(now.getTime() + now.getTimezoneOffset() * 60000)
-  now.getTime()
+getUTCTime = require("#{serverShared}/utils").getUTCTime
+
+OpenRouter = require("#{serverShared}/open_route.coffee")()
+SecureRouter = require("#{serverShared}/authenticated_route.coffee")()
+
 
 OpenRouter.post('/login', (req, res)->
   if req.body.un is '1' and req.body.pw is '2'
@@ -33,7 +33,7 @@ SecureRouter.post('/logout', (req, res)->
   res.json({})
 )
 
-SecureRouter.get('/fetch', (req, res)->
+SecureRouter.get('/', (req, res)->
   setTimeout(->
     res.json({
       userId: req.session.userId

@@ -258,11 +258,13 @@ Object.defineProperties(m,
       extend
 
 
+
+
   'multiClass':
     enumerable: true
     configurable: false
     writable: false
-    value: (classes...)->
+    value: (classes...) ->
       classes.reduce (Parent, Child)->
         class Child_Projection extends Parent
           constructor: ->

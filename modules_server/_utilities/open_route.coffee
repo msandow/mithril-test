@@ -5,7 +5,7 @@ module.exports = () ->
   Router = new express.Router()
 
   Router.use((req, res, next)->
-    console.log('Open request', req.originalUrl)
+    #console.log('Open request', req.originalUrl)
     next()
   )
   

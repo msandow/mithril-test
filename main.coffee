@@ -3,6 +3,43 @@ app = express()
 bodyParser = require('body-parser')
 session = require('express-session')
 uuid = require('uuid')
+fs = require('fs')
+async = require('async')
+
+dirPathClean = (dir)->
+  dir += "/" if dir[dir.length-1] isnt "/"
+  dir
+
+
+addRoutes = (rte) ->
+    rtr = require(rte)
+    if !Array.isArray(rtr.router)
+        app.use(rtr.scope, rtr.router);
+      else
+        for subRouter in rtr.router
+          app.use(rtr.scope, subRouter)
+
+
+routerIncluder = (app, root) ->
+  root = dirPathClean(root)
+  
+  (callback) ->
+    fs.readdir(root, (err, dirs)->
+      dirs = dirs
+        .filter((i)-> i[0] isnt '_')
+        .map((i)->
+          (cb)->
+            full = dirPathClean(root+i) + "routes.coffee"
+            fs.exists(full, (exs)->
+              if exs
+                addRoutes(full)
+              cb()
+            )
+        )
+      
+      async.series(dirs, ()-> callback())
+          
+    )
 
 module.exports = ->
 
@@ -18,14 +55,12 @@ module.exports = ->
 
   app.use(bodyParser.urlencoded({ extended: false }))
   app.use(bodyParser.json())
-
-  for router in [ require(__dirname + '/routes/boxy.coffee'),
-    require(__dirname + '/routes/user.coffee') ]
-      if !Array.isArray(router.router)
-        app.use(router.scope, router.router);
-      else
-        for subRouter in router.router
-          app.use(router.scope, subRouter)
-
-
-  app.listen(8000)
+  
+  async.series([
+    routerIncluder(app, "#{__dirname}/modules_server/")
+    routerIncluder(app, "#{__dirname}/modules_client/")
+  ],
+  (err, res)->
+    console.log('App started')
+    app.listen(8000)
+  )
