@@ -31,7 +31,7 @@ module.exports = ->
   app.use(bodyParser.urlencoded({ extended: false }))
   app.use(bodyParser.json())
   
-  glob("#{__dirname}/modules{_server,_client}/!(_**)/routes.*",(err, files)->
+  glob("#{__dirname}/modules{_server,_client}/!(_**)/endpoints.*",(err, files)->
     for file in files
       addRoutes(file)
 

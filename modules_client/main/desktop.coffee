@@ -1,9 +1,14 @@
 require('./../../public/mithril.app.coffee')
-require('./../login/desktop.coffee')()
-require('./../dashboard/desktop.coffee')()
 
 m.ready(->
-  Default = 
+
+  for module in [
+    require('./../dashboard/desktop.coffee')
+    require('./../login/desktop.coffee')
+  ]
+    m.register(module)
+
+  m.register(
     view: ->
     controller: ->
       if not window.sessionStorage.getItem('currentUser')
@@ -12,8 +17,7 @@ m.ready(->
         m.route('/dashboard')
 
     route: '/'
-
-  m.register(Default)
+  )
 
   m.start(m.query('body'))
 )

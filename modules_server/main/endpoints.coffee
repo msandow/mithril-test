@@ -9,7 +9,7 @@ clientFolder = "#{__dirname}/../../modules_client"
 Router = require("#{sharedFolder}/open_route.coffee")()
 
 Router.use(Boxy.CoffeeJs(
-  route: '/js/app2.js'
+  route: '/js/desktop.js'
   source: "#{clientFolder}/main/desktop.coffee"
   debug: true
 ))
@@ -18,6 +18,20 @@ Router.use(Boxy.CoffeeJs(
 Router.use(Boxy.ScssCss(
   route: '/css/desktop.css'
   source: "#{clientFolder}/main/desktop.scss"
+  debug: true
+))
+
+
+Router.use(Boxy.CoffeeJs(
+  route: '/js/mobile.js'
+  source: "#{clientFolder}/main/mobile.coffee"
+  debug: true
+))
+
+
+Router.use(Boxy.ScssCss(
+  route: '/css/mobile.css'
+  source: "#{clientFolder}/main/mobile.scss"
   debug: true
 ))
 

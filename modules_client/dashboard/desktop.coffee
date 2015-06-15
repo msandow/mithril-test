@@ -1,22 +1,27 @@
+secureAjax = require('./../_utilities/secureAjax.coffee')
 header = require('./../_components/header/desktop.coffee')
-desktopController = require('./controller.coffee')
 
-module.exports = ->
-  m.ready(->
-  
-    Dashboard = 
-      controller: class extends desktopController
 
-      view: (ctx) ->
-        return null if not ctx.viewReady
-        [
-          header()
-          m.el('h1',"Hello user " + ctx.name)
-        ]
-        
+module.exports = 
+  controller: class
+    constructor: ->
+      @name = ''
+      @viewReady = false
 
-      route: '/dashboard'
+      secureAjax(
+        method: 'GET'
+        url: '/user/'
+        complete: (error, response)=>
+          @name = response.name
+          @viewReady = true
+      )
 
-    m.register(Dashboard)
-  
-  )
+  view: (ctx) ->
+    return m.el('span','loading...') if not ctx.viewReady
+    [
+      header()
+      m.el('h1',"Hello user " + ctx.name)
+    ]
+
+
+  route: '/dashboard'
