@@ -1,5 +1,5 @@
 require('./../../public/mithril.app.coffee')
-require('./../user/desktop.coffee')()
+require('./../login/desktop.coffee')()
 require('./../dashboard/desktop.coffee')()
 
 m.ready(->

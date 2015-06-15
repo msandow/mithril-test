@@ -6,7 +6,7 @@ module.exports = (configs) ->
   origCb = configs.complete or (->)
   configs.complete = (error, response, xhr) ->
     if error and xhr?.status is 401
-      invalidate()
+      invalidate('/login/timeout')
       return 
 
     origCb.apply(this, arguments)

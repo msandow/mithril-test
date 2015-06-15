@@ -1,0 +1,16 @@
+@mixin vedor-prefix($property, $value) {
+  -webkit-#{$property}: #{$value};
+  -ms-#{$property}: #{$value};
+  -moz-#{$property}: #{$value};
+  -o-#{$property}: #{$value};
+  #{$property}: #{$value};
+}
+
+@mixin placeholder {
+  $form_placeholder_prefixes: ('::-webkit-input-placeholder', ':-moz-placeholder', '::-moz-placeholder', ':-ms-input-placeholder', '::input-placeholder', '::placeholder' );
+  @each $prefix in $form_placeholder_prefixes {
+    [placeholder]#{$prefix}{
+      @content;
+    }
+  }
+}

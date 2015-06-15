@@ -15,7 +15,6 @@ module.exports = () ->
     )
         next()
     else
-      req.session.destroy()
       res.status(401).json({message: 'Not logged in'}).end()
   )
   

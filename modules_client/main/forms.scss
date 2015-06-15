@@ -1,0 +1,15 @@
+@import 'mixins.scss';
+
+@include placeholder{
+  color:red;
+}
+
+input[type="text"], input[type="password"]{
+  outline: none;
+  border:1px solid black;
+  
+  &:focus{
+    background-color:lighten(blue, 30%);
+    outline: none;
+  }
+}

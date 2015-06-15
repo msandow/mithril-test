@@ -16,7 +16,7 @@ Router.use(Boxy.CoffeeJs(
 
 
 Router.use(Boxy.ScssCss(
-  route: '/css/app.css'
+  route: '/css/desktop.css'
   source: "#{clientFolder}/main/desktop.scss"
   debug: true
 ))

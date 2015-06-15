@@ -9,6 +9,7 @@
     "BoxyBrown": "git://github.com/msandow/BoxyBrown.git",
     "express-session": "=1.11.2",
     "uuid": "=2.0.1",
-    "async": "=1.2.1"
+    "async": "=1.2.1",
+    "glob": "=5.0.10"
   }
 }
