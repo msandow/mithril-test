@@ -1,7 +1,7 @@
 "use strict"
 
 isNode = typeof window is 'undefined'
-m = if isNode then require('./mithril.min.js') else window.m
+m = if isNode then require('./mithril.js') else window.m
 
 
 
@@ -203,6 +203,7 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (conf) ->
+      return if isNode
       requestOptions = formatAjaxRequest(conf)
       transport = null
       
@@ -334,4 +335,5 @@ Object.defineProperties(m,
 
 if isNode
   m.route.param = (-> undefined)
+  m.request = (->)
   module.exports = m

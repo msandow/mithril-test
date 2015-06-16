@@ -8,3 +8,7 @@ module.exports =
       oclick(evt)
     
     m.el('a', conf, text)
+  
+  internalLink: (text, conf = {}) ->
+    conf.config = m.route
+    m.el('a', conf, text)
