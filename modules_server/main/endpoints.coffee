@@ -6,6 +6,10 @@ sharedFolder = "#{__dirname}/../_utilities"
 publicFolder = "#{__dirname}/../../public"
 clientFolder = "#{__dirname}/../../modules_client"
 
+global.m = require("#{publicFolder}/mithril.app.coffee")
+
+loginView = require("#{clientFolder}/login/desktop.coffee")
+
 Router = require("#{sharedFolder}/open_route.coffee")()
 
 Router.use(Boxy.CoffeeJs(
@@ -35,6 +39,7 @@ Router.use(Boxy.ScssCss(
   debug: true
 ))
 
+
 Router.use(
   express.static(publicFolder, setHeaders: (res, file, stats) ->
     if /\.map$/i.test(file) and !res.headersSent
@@ -42,6 +47,22 @@ Router.use(
     return
   )
 )
+
+Router.get('/server', (req, res)->
+  doc = m('html[lang="en"]', [
+    m.el('head', [
+      m('meta[charset="utf-8"]')
+      m('title','Server Side Mithril')
+    ])
+    m('body',{onclick: ()->alert('f')}, loginView)
+  ])
+  
+  res.writeHead(200,
+    'Content-Type': 'text/html'
+  )
+  res.end("<!doctype html>" + m.toString(doc))
+)
+
 
 module.exports = 
   scope: '/'

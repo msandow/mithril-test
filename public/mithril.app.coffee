@@ -1,6 +1,7 @@
 "use strict"
-window.m = window.m or {}
-m = window.m
+
+isNode = typeof window is 'undefined'
+m = if isNode then require('./mithril.min.js') else window.m
 
 
 
@@ -289,4 +290,48 @@ Object.defineProperties(m,
             Child_Projection[key] = Child[key]
 
         Child_Projection
+
+
+
+  'toString':
+    enumerable: true
+    configurable: false
+    writable: false
+    value: (stack) ->
+      return '' if not stack
+      html = ''
+      
+      if stack.controller is undefined and stack.view is undefined
+
+        # Plain Mithril objects
+        html += "<#{stack.tag}" if stack.tag
+
+        if stack.attrs and Object.keys(stack.attrs).length
+          attrs = []
+          for own attr, val of stack.attrs when !/^on[A-Za-z]/.test(attr) and typeof val isnt 'function'
+            val = val.replace(/"/gim, '\\"')
+            attrs.push("#{attr}=\"#{val}\"")
+
+          html += " " + attrs.join(" ") if attrs.length
+
+        html += ">" if stack.tag
+
+        if stack.children?.length
+          for child in stack.children
+            html += m.toString(child) if typeof child is 'object'
+            html += child if typeof child is 'string' or typeof child is 'number'
+
+        html += "</#{stack.tag}>" if stack.tag
+
+      else
+        
+        # Mithril module
+        html += m.toString(stack.view(new stack.controller()))
+
+      html
 )
+
+
+if isNode
+  m.route.param = (-> undefined)
+  module.exports = m

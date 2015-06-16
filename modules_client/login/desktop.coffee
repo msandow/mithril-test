@@ -1,7 +1,6 @@
 secureAjax = require('./../_utilities/secureAjax.coffee')
 forms = require('./../_components/forms/desktop.coffee')
 
-
 module.exports = 
   controller: class      
     constructor: ->
