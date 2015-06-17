@@ -1,23 +1,17 @@
 require('./../../public/mithril.app.coffee')
 
-m.ready(->
+desktop = ->
 
   for module in [
+    require('./../index/desktop.coffee')
     require('./../dashboard/desktop.coffee')
     require('./../login/desktop.coffee')
   ]
     m.register(module)
 
-  m.register(
-    view: ->
-    controller: ->
-      if not window.sessionStorage.getItem('currentUser')
-        m.route('/login')
-      else
-        m.route('/dashboard')
-
-    route: '/'
-  )
-
   m.start(m.query('body'))
-)
+
+if typeof window is 'undefined'
+  module.exports = desktop
+else
+  m.ready(desktop)

@@ -52,6 +52,8 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (selectorOrElement, selector) ->
+      return null if isNode
+
       if selector is undefined
         q = document.querySelectorAll.apply(document, [selectorOrElement])
         return if q.length is 1 then q[0] else q
@@ -92,7 +94,7 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (cb) ->
-      if document.readyState is "complete"
+      if isNode or document.readyState is "complete"
         cb()
       else
         if !m.readyQueue.length
@@ -109,6 +111,7 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (module) ->
+      module.serverController = null if module.serverController is undefined
       module.controller = (->) if module.controller is undefined
       module.view = (-> return null) if module.view is undefined
       module.route = null if module.route is undefined or !module.route.length
@@ -122,9 +125,11 @@ Object.defineProperties(m,
     configurable: false
     writable: false
     value: (DOMRoot) ->
+      return m.toRegister if isNode
+      
       m.route.mode = "hash"
       routeHash = {}
-    
+
       while m.toRegister.length
         currMod = m.toRegister.shift()
 
@@ -298,11 +303,18 @@ Object.defineProperties(m,
     enumerable: true
     configurable: false
     writable: false
-    value: (stack) ->
+    value: (stack, req=null, res=null) ->
       return '' if not stack
       html = ''
       
-      if stack.controller is undefined and stack.view is undefined
+      if Array.isArray(stack)
+        
+        # Array of plain Mithril objects
+        for child in stack
+          html += m.toString(child) if typeof child is 'object'
+          html += child if typeof child is 'string' or typeof child is 'number'
+      
+      if (stack.controller is undefined or stack.serverController is undefined) and stack.view is undefined
 
         # Plain Mithril objects
         html += "<#{stack.tag}" if stack.tag
@@ -327,13 +339,15 @@ Object.defineProperties(m,
       else
         
         # Mithril module
-        html += m.toString(stack.view(new stack.controller()))
+        con = if typeof stack.serverController is 'function' then stack.serverController else stack.controller
+        html += m.toString(stack.view(new con(req, res)))
 
       html
 )
 
 
 if isNode
+  m.route = (-> undefined)
   m.route.param = (-> undefined)
   m.request = (->)
   module.exports = m

@@ -671,7 +671,7 @@ var m = (function app(window, undefined) {
 	};
 
 	//routing
-	var modes = {pathname: "", hash: "#", search: "?"};
+	var modes = {pathname: "", hash: "#!", search: "?"};
 	var redirect = noop, routeParams, currentRoute, isDefaultRoute = false;
 	m.route = function() {
 		//m.route()

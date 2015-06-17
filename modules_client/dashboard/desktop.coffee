@@ -3,6 +3,11 @@ header = require('./../_components/header/desktop.coffee')
 
 
 module.exports = 
+  serverController: class
+    constructor: ->
+      @name = ''
+      @viewReady = true
+  
   controller: class
     constructor: ->
       @name = ''
