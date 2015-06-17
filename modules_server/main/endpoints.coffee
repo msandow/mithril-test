@@ -7,7 +7,6 @@ sharedFolder = "#{__dirname}/../_utilities"
 publicFolder = "#{__dirname}/../../public"
 clientFolder = "#{__dirname}/../../modules_client"
 
-global.m = require("#{publicFolder}/mithril.app.coffee")
 desktopStaticApp = require("#{clientFolder}/main/desktop.coffee")
 
 
@@ -66,21 +65,6 @@ Router.use(
     return
   )
 )
-
-#Router.get('/server', (req, res)->
-#  doc = m('html[lang="en"]', [
-#    m.el('head', [
-#      m('meta[charset="utf-8"]')
-#      m('title','Server Side Mithril')
-#    ])
-#    m('body',{onclick: ()->alert('f')}, loginView)
-#  ])
-#  
-#  res.writeHead(200,
-#    'Content-Type': 'text/html'
-#  )
-#  res.end("<!doctype html>" + m.toString(doc))
-#)
 
 
 module.exports = 

@@ -3,7 +3,8 @@
 isNode = typeof window is 'undefined'
 m = if isNode then require('./mithril.js') else window.m
 
-
+if isNode
+  global.m = m
 
 formatAjaxRequest = (ob) ->
   ob.method = ob.method.toUpperCase()
@@ -339,7 +340,7 @@ Object.defineProperties(m,
       else
         
         # Mithril module
-        con = if typeof stack.serverController is 'function' then stack.serverController else stack.controller
+        con = if isNode and stack.serverController then stack.serverController else stack.controller
         html += m.toString(stack.view(new con(req, res)))
 
       html
