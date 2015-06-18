@@ -1,8 +1,16 @@
 forms = require('./../_components/forms/desktop.coffee')
 
-module.exports = 
+module.exports =
+  
+  serverController: class
+    constructor: (req, res, triggerView) ->
+      @headerMessage = switch req.params?.message
+        when 'timeout' then 'You\'ve timed out'
+        when undefined, false then 'Welcome'
+      triggerView(@)
+
   controller: class      
-    constructor: ->
+    constructor: ->      
       @headerMessage = switch m.route.param("message")
         when 'timeout' then 'You\'ve timed out'
         when undefined, false then 'Welcome'
@@ -38,7 +46,7 @@ module.exports =
 
   view: (ctx) ->
     m.el('form',{
-      onsubmit: ctx.loginSubmit.bind(ctx)
+      onsubmit: ctx.loginSubmit?.bind(ctx)
     },[
       m.el('h4',ctx.headerMessage)
       forms.text(ctx.un, {placeholder: 'Username'}),

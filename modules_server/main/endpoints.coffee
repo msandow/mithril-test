@@ -41,13 +41,15 @@ Router.use(Boxy.ScssCss(
 
 buildStaticRoute = (route, module) ->
   Router.get(route, (req, res)->
-    fs.readFile("#{__dirname}/../../public/index.html", "utf8", (error, data)->
-      m.toString(module, (html)->
-        html = data
-          .replace(/<!--\scontent\s-->/gim, html)
-        res.send(html)
-      , req, res)
-    )
+    m.toString(module, (html)->
+      Boxy.TokenReplacer("#{__dirname}/../../public/index.html", {
+        compiledHtml: html
+        keywords: 'foo, bar'
+        description: 'my site'
+      }, (err, data)->
+        res.end(err or data)
+      )
+    , req, res)
   )
 
 for deskTopModule in desktopStaticApp()

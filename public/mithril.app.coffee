@@ -1,9 +1,9 @@
 "use strict"
 
 isNode = typeof window is 'undefined'
-m = if isNode then require('./mithril.js') else window.m
+m = if isNode then require(__dirname + '/mithril.js') else window.m
 
-if isNode
+if isNode and not global.m
   global.m = m
 
 formatAjaxRequest = (ob) ->
@@ -44,6 +44,28 @@ headersToJson = (str) ->
     ob[line.substring(0, line.indexOf(":")).trim()] = line.substring(line.indexOf(":")+1).trim()
   
   JSON.stringify(ob)
+
+
+
+shiftWalker = (arr, final, seed, req, res)->
+  if not arr or not arr.length
+    final(seed)
+    return
+
+  item = arr.shift()
+  
+  shiftWalker(arr, final, seed, req, res) if not item
+  
+  if typeof item is 'string' or typeof item is 'number'
+    shiftWalker(arr, final, seed + item, req, res)
+  else if typeof item is 'object' and item['$trusted'] isnt undefined
+    for own k, v of item
+      seed += v if not /[\D]/.test(k)
+    shiftWalker(arr, final, seed, req, res)
+  else if typeof item is 'object'
+    m.toString(item, (newHtml)->
+      shiftWalker(arr, final, seed + newHtml, req, res)
+    , req, res)
 
 
 
@@ -352,30 +374,8 @@ Object.defineProperties(m,
             html += newHtml
             cb(html)
           , req, res)
-
-      22
 )
 
-
-shiftWalker = (arr, final, seed, req, res)->
-  if not arr or not arr.length
-    final(seed)
-    return
-
-  item = arr.shift()
-  
-  shiftWalker(arr, final, seed, req, res) if not item
-  
-  if typeof item is 'string' or typeof item is 'number'
-    shiftWalker(arr, final, seed + item, req, res)
-  else if typeof item is 'object' and item['$trusted'] isnt undefined
-    for own k, v of item
-      seed += v if not /[\D]/.test(k)
-    shiftWalker(arr, final, seed, req, res)
-  else if typeof item is 'object'
-    m.toString(item, (newHtml)->
-      shiftWalker(arr, final, seed + newHtml, req, res)
-    , req, res)
   
   
 
