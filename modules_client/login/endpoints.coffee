@@ -34,5 +34,5 @@ SecureRouter.post('/logout', (req, res)->
 
 
 module.exports = 
-  scope: '/login'
+  scope: '/endpoint/login'
   router: [OpenRouter, SecureRouter]

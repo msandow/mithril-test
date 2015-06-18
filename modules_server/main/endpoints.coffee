@@ -9,7 +9,6 @@ clientFolder = "#{__dirname}/../../modules_client"
 
 desktopStaticApp = require("#{clientFolder}/main/desktop.coffee")
 
-
 Router = require("#{sharedFolder}/open_route.coffee")()
 
 Router.use(Boxy.CoffeeJs(
@@ -41,12 +40,13 @@ Router.use(Boxy.ScssCss(
 
 
 buildStaticRoute = (route, module) ->
-  Router.get("/_escaped_fragment_#{route}", (req, res)->
+  Router.get(route, (req, res)->
     fs.readFile("#{__dirname}/../../public/index.html", "utf8", (error, data)->
-      html = data
-        .replace(/<head>/gim, '<head>\n<base href="../"/>')
-        .replace(/<!--\scontent\s-->/gim, m.toString(module, req, res))
-      res.send(html)
+      m.toString(module, (html)->
+        html = data
+          .replace(/<!--\scontent\s-->/gim, html)
+        res.send(html)
+      , req, res)
     )
   )
 

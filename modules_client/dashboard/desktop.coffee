@@ -4,9 +4,13 @@ header = require('./../_components/header/desktop.coffee')
 
 module.exports = 
   serverController: class
-    constructor: ->
+    constructor: (req, res, triggerView)->
       @name = ''
       @viewReady = true
+      setTimeout(=>
+        @name = '___'
+        triggerView(@)
+      ,1000)
   
   controller: class
     constructor: ->
@@ -15,7 +19,7 @@ module.exports =
 
       secureAjax(
         method: 'GET'
-        url: '/user/'
+        url: '/endpoint/user/'
         complete: (error, response)=>
           @name = response.name
           @viewReady = true

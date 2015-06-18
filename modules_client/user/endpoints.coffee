@@ -30,5 +30,5 @@ SecureRouter.get('/', (req, res)->
 
 
 module.exports = 
-  scope: '/user'
+  scope: '/endpoint/user'
   router: [SecureRouter]

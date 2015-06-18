@@ -1,4 +1,3 @@
-secureAjax = require('./../_utilities/secureAjax.coffee')
 forms = require('./../_components/forms/desktop.coffee')
 
 module.exports = 
@@ -20,7 +19,7 @@ module.exports =
       else
         m.ajax(
           method: 'POST'
-          url: '/login/login'
+          url: '/endpoint/login/login'
           data:
             un: @un()
             pw: @pw()

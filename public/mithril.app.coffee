@@ -128,7 +128,7 @@ Object.defineProperties(m,
     value: (DOMRoot) ->
       return m.toRegister if isNode
       
-      m.route.mode = "hash"
+      m.route.mode = "pathname"
       routeHash = {}
 
       while m.toRegister.length
@@ -304,48 +304,80 @@ Object.defineProperties(m,
     enumerable: true
     configurable: false
     writable: false
-    value: (stack, req=null, res=null) ->
-      return '' if not stack
-      html = ''
+    value: (stack=null, cb=(->), req = null, res = null) ->
+      cb('') if not stack
       
-      if Array.isArray(stack)
+      if isNode and typeof stack is 'object' and stack.serverController
         
-        # Array of plain Mithril objects
-        for child in stack
-          html += m.toString(child) if typeof child is 'object'
-          html += child if typeof child is 'string' or typeof child is 'number'
-      
-      if (stack.controller is undefined or stack.serverController is undefined) and stack.view is undefined
-
-        # Plain Mithril objects
-        html += "<#{stack.tag}" if stack.tag
-
-        if stack.attrs and Object.keys(stack.attrs).length
-          attrs = []
-          for own attr, val of stack.attrs when !/^on[A-Za-z]/.test(attr) and typeof val isnt 'function'
-            val = val.replace(/"/gim, '\\"')
-            attrs.push("#{attr}=\"#{val}\"")
-
-          html += " " + attrs.join(" ") if attrs.length
-
-        html += ">" if stack.tag
-
-        if stack.children?.length
-          for child in stack.children
-            html += m.toString(child) if typeof child is 'object'
-            html += child if typeof child is 'string' or typeof child is 'number'
-
-        html += "</#{stack.tag}>" if stack.tag
-
+        # Mithril module with server-side controller
+        new stack.serverController(req, res, (ctrl)->
+          m.toString(stack.view(ctrl),(newHtml)->
+            cb(newHtml)
+          )
+        )
+        
       else
-        
-        # Mithril module
-        con = if isNode and stack.serverController then stack.serverController else stack.controller
-        html += m.toString(stack.view(new con(req, res)))
 
-      html
+        html = ''
+
+        if Array.isArray(stack)
+
+          # Array of plain Mithril objects
+          shiftWalker(stack, cb, html, req, res)
+
+        else if (stack.controller is undefined or stack.serverController is undefined) and stack.view is undefined
+
+          # Plain Mithril objects
+          html += "<#{stack.tag}" if stack.tag
+
+          if stack.attrs and Object.keys(stack.attrs).length
+            attrs = []
+            for own attr, val of stack.attrs when !/^on[A-Za-z]/.test(attr) and typeof val isnt 'function'
+              val = val.replace(/"/gim, '\\"')
+              attrs.push("#{attr}=\"#{val}\"")
+
+            html += " " + attrs.join(" ") if attrs.length
+
+          html += ">" if stack.tag
+          
+          shiftWalker(stack.children, (newHtml)->
+            newHtml += "</#{stack.tag}>" if stack.tag
+            cb(newHtml)
+          , html, req, res)
+
+        else
+
+          # Mithril module with client-side controller
+          m.toString(stack.view(new stack.controller()), (newHtml)->
+            html += newHtml
+            cb(html)
+          , req, res)
+
+      22
 )
 
+
+shiftWalker = (arr, final, seed, req, res)->
+  if not arr or not arr.length
+    final(seed)
+    return
+
+  item = arr.shift()
+  
+  shiftWalker(arr, final, seed, req, res) if not item
+  
+  if typeof item is 'string' or typeof item is 'number'
+    shiftWalker(arr, final, seed + item, req, res)
+  else if typeof item is 'object' and item['$trusted'] isnt undefined
+    for own k, v of item
+      seed += v if not /[\D]/.test(k)
+    shiftWalker(arr, final, seed, req, res)
+  else if typeof item is 'object'
+    m.toString(item, (newHtml)->
+      shiftWalker(arr, final, seed + newHtml, req, res)
+    , req, res)
+  
+  
 
 if isNode
   m.route = (-> undefined)

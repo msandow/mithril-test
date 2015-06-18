@@ -10,7 +10,7 @@ module.exports = class
 
     secureAjax(
       method: 'POST'
-      url: '/login/logout'
+      url: '/endpoint/login/logout'
       complete: (error, response) =>
         invalidate()
     )
